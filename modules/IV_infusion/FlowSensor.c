@@ -28,8 +28,9 @@ void flowsensor_task(uint16_t* adc_values)
 {
 	ms_time_t now = millis();
 	
-	if ((last_fs_st == UP && adc_values[SENSOR_PIN] < THRESH) ||
-		(last_fs_st == DOWN && adc_values[SENSOR_PIN] > THRESH)) {
+	if (((last_fs_st == UP && adc_values[SENSOR_PIN] < THRESH) ||
+		(last_fs_st == DOWN && adc_values[SENSOR_PIN] > THRESH))
+	&& (now >= (last_blip + 20))) {
 		last_fs_st = !last_fs_st;
 		
 		if (!fluids_sent) {
