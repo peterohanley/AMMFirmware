@@ -16,15 +16,14 @@
 	_(PROPOFOL)\
 	_(LIDOCANE)\
 	_(ROC)\
-	_(FLUIDS)\
-	_(plchldr)
+	_(FLUIDS)
 
 #define AS_ACT_STR(s) DEFINE_PSTRING(pstr_##s,"GIVE_" #s);
 #define AS_RCV_STR(s) DEFINE_PSTRING(pstr_rcv_##s,#s);
 #define AS_ENUM_ELT(s) el_##s,
 #define AS_W8ING_BOOL(s) bool s##_msg_waiting;
-#define AS_HACK_DELAY_VAR(s) ms_time_T HACK_msg_rcvd_##s;
-
+#define AS_HACK_DELAY_VAR(s) ms_time_t HACK_msg_rcvd_##s;
+#define AS_HACK_SENDABLE_VAR(s) bool HACK_msg_sendable_##s;
 typedef enum {
 	NO_FLOW_MESSAGE,
 	FLOW_ACT_MESSAGE_TABLE(AS_ENUM_ELT)
@@ -34,6 +33,7 @@ typedef enum {
 FLOW_ACT_MESSAGE_TABLE(AS_W8ING_BOOL);
 
 FLOW_ACT_MESSAGE_TABLE(AS_HACK_DELAY_VAR);
+FLOW_ACT_MESSAGE_TABLE(AS_HACK_SENDABLE_VAR);
 
 bool blip_msg_waiting;
 //bool fluids_sent;

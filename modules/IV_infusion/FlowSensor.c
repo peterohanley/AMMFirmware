@@ -4,11 +4,12 @@
 #define UP 1
 #define THRESH 512
 #define TIME_THRESH 250
-#define SENSOR_PIN 1
+#define SENSOR_PIN 0
 uint8_t last_fs_st;
 ms_time_t last_blip;
 //SomePString_t* error_to_send; // TODO
 flow_messages last_flowmsg_rcvd = NO_FLOW_MESSAGE; //el_PROPOFOL;
+#define MESSAGE_DELAY_TIME 10000
 uint8_t fs_module_st;
 extern bool blip_msg_waiting;
 bool iv_connected;
@@ -44,7 +45,9 @@ void flowsensor_task(uint16_t* adc_values)
 	
 	//now message sending logic based on simple delays
 #define AS_DELAY_HANDLER(s) do {\
-	if (now >= (HACK_msg_rcvd_##s + MESSAGE_DELAY_TIME)) {\
+	if (now >= (HACK_msg_rcvd_##s + MESSAGE_DELAY_TIME) && HACK_msg_sendable_##s && iv_connected) {\
+		s##_msg_waiting = 1;\
+		HACK_msg_sendable_##s = 0;\
 	}\
 	} while (0);
 	FLOW_ACT_MESSAGE_TABLE(AS_DELAY_HANDLER);
@@ -70,11 +73,10 @@ void flow_sensor_handle_PROX(char* data)
 	//#define AS_ACT_CMP_CASE(s) if (!ram_prog_cmp(data,(char*)&pstr_rcv_##s,MIN(data[0],pstr_rcv_##s .len))) {last_flowmsg_rcvd = el_##s;return;} 
 	//hacky
 	ms_time_t now = millis();
-#define AS_ACT_CMP_CASE(s) if (!ram_prog_cmp(data,(char*)&pstr_rcv_##s,MIN(data[0],pstr_rcv_##s .len))) {last_flowmsg_rcvd = el_##s;HACK_msg_rcvd_##s = now;return;} 
+#define AS_ACT_CMP_CASE(s) if (!ram_prog_cmp(data,(char*)&pstr_rcv_##s,MIN(data[0],pstr_rcv_##s .len))) {last_flowmsg_rcvd = el_##s;HACK_msg_rcvd_##s = now;HACK_msg_sendable_##s=1;return;} 
 	
 	FLOW_ACT_MESSAGE_TABLE(AS_ACT_CMP_CASE);
 	//determine which string it is
-	TIME_THRESH = prevtt;
 }
 
 //TODO this is defined somewhere else too, only define 
