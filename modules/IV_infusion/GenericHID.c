@@ -432,13 +432,6 @@ int main(void)
 		HID_Device_USBTask(&Generic_HID_Interface);
 		USB_USBTask();
 		adc_task();
-		//airwaysensor_task(adc_values, sensor_varnces, sensor_evt_thresh, &event_buffer);
-		//pin7_task();
-		//lung_module_task();
-		//eschar_task(adc_values);
-		//pulse_task();
-		//rfid_task();
-		//parsed_rfid_ready = try_parse_message();
 		
 		flowsensor_task(adc_values);
 	}
@@ -578,7 +571,6 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 	//uint16_t strlen_rem;
 	TIME_t ms;
 	UNUSED(HIDInterfaceInfo);
-	const event_t* nextevt;
 	switch (ReportType) {
 		case HID_REPORT_ITEM_Feature:
 			/*if (stm_state == STRINGSTM_STRING_REQUESTED 
@@ -646,178 +638,18 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 		
 			break;
 		case HID_REPORT_ITEM_In:
-		//FIXME use another switch here rather than elif cascade
-		/*
-		Here we must decide what to send back. If there is a waiting event 
-		(pin7, ADC) send that.
-		
-		Otherwise send the next bio report.
-		
-		However, every report id must also have a clause for if it is specicifically requested. 
-		*/
 		//TODO use a table of functions that might set the report, call each in turn
 		//this will allow better operation with multiple reports, and allow each module's variables to be encapsulated in their files
 			
-			if ((*ReportID == GET_SENSOR_EVENT_REPORT_ID) /*(*ReportID == 0)*/) {
-				//FIXME duplicated code here. Not sure how to handle this duplication as this code must be on the control path when this specific report is requested.
-				if (event_buffer.occupancy) { // nextevt != NULL) {
-					
-					nextevt = deq_event(&event_buffer);
-					event_to_wire(nextevt, Data);
-					*ReportSize = GET_SENSOR_EVENT_REPORT_SIZE;
-					*ReportID = GET_SENSOR_EVENT_REPORT_ID;
-					return true;
-				} else {
-					return false;
-				}
-			} else if ((*ReportID == 3) /*|| (*ReportID == 0)*/) { //show adc output
-				int desired[] = {1, 4, 6, 7}; // 1467 is real, use bogus only for checking
-				for (int adcix = 0; adcix < 4; adcix++) {
-					Data[2*adcix + 1] = (adc_values[desired[adcix]] >> 8);
-					Data[2*adcix] = adc_values[desired[adcix]] & 0xff;
-				}
-				for (int i = 0; i < 4; i ++) {
-					float_to_wire(sensor_varnces[i],Data+8+4*i);
-				}
-				*ReportID = 3;
-				*ReportSize = 24;
-				return true;
-			} else  if (*ReportID == 0) {
-				
-				if (rfid_usable_to_send) {
-					char *msgbuf;
-					msgbuf = *usable_message;
-					if (msgbuf[0] == 0x44 && msgbuf[1] == 0x16) {
-						unsigned char* tagstart = (unsigned char*) msgbuf+10;
-						unsigned char pstr_len;
-						const char* pstr_msg = NULL;
-						
-						if (classify_tag(tagstart, &pstr_len, &pstr_msg)) {
-							if (pstr_msg == NULL) {
-								//Recognized, but sent recently. take no action.
-								return false;
-							} else {
-								rfid_enable_buzzer();
-								SEND_PROX_UGLY_HACK(pstr_len,pstr_msg);
-								rfid_usable_to_send = 0;
-								return true;
-							}
-						} // classify_tag returns 0, tag not recognized
-					}
-					return false;
-					/* // passthrough code
-					if (msgbuf[0] == 0x44 && msgbuf[1] == 0x05) {
-						rfid_usable_to_send = 0;
-						return false;
-					}
-					for (int i = 0; i < 64; i++) {
-						Data[i] = msgbuf[i];
-					}
-					
-					*ReportID = RFID_TAG_PASSTHROUGH_REPORT_ID;
-					*ReportSize = 64; //FIXME if this ever changes gotta fix it
-					rfid_usable_to_send = 0;
-					return true;
-					//*/
-				}
-#ifdef ECHO_PROX_TO_ACT 
-				else if (prox2act_msg_waiting) {
-					int p2a_len = prox2act[0];
-					for (int i = 0; i <= p2a_len; i++) {
-						Data[i] = prox2act[i];
-					}
-					*ReportID = BIO_EVENT_REPORT_ID;
-					*ReportSize = BIO_EVENT_REPORT_SIZE;
-					prox2act_msg_waiting = 0;
-					return true;
-				}
-#endif
-				else if (esophageal_msg_waiting) {
-					SEND_ACT(esophageal_msg_str);
-					esophageal_msg_waiting = 0;
-					return true;
-				} else if (vent_msg_waiting) {
-					SEND_ACT(vent_msg_str);
-					vent_msg_waiting = 0;
-					return true;
-				} else if (bvm_off_msg_waiting) {
-					SEND_ACT(bvm_off_msg_str);
-					bvm_off_msg_waiting = 0;
-					return true;
-				} else if (mainstem_msg_waiting) {
-					SEND_ACT(mainstem_msg_str);
-					mainstem_msg_waiting = 0;
-					return true;
-				} else if (hypervent_msg_waiting) {
-					SEND_ACT(hypervent_msg_str);
-					hypervent_msg_waiting = 0;
-					return true;
-				} else if (o2_msg_waiting) {
-					SEND_ACT(o2_msg_str);
-					o2_msg_waiting = 0;
-					return true;
-				}
-#ifdef SEND_BLIP 
-				else if (blip_msg_waiting) {
-					SEND_ACT(blip_str);
-					blip_msg_waiting = 0;
-					return true;
-				} 
-#endif
-				else if (heat_msg_waiting) {
-					SEND_ACT(heat_str);
-					heat_msg_waiting = 0;
-					return true;
-				}
-				//TODO
+			if (*ReportID == 0) {
 #define AS_ACT_SENDER(s) \
 	if (s##_msg_waiting) {\
 		SEND_ACT(pstr_##s);\
 		s##_msg_waiting = 0;\
 		return true;\
 	}
-				FLOW_ACT_MESSAGE_TABLE(AS_ACT_SENDER);
-				//FIXME use an array and a loop
-#define ESCHAR_RESPONSE_MACRO(x) if (eschar_msg_state_##x == ESCHAR_MSG_WAITING) {\
-					SEND_ACT(eschar_msg_##x);\
-					eschar_msg_state_##x = ESCHAR_MSG_SENT;\
-					return true;\
-				}
-				ESCHAR_RESPONSE_MACRO(1)
-				ESCHAR_RESPONSE_MACRO(2)
-				ESCHAR_RESPONSE_MACRO(3)
-				ESCHAR_RESPONSE_MACRO(4)
-				ESCHAR_RESPONSE_MACRO(5)
-				
-				//send the sensor spike event
-				if (event_buffer.occupancy) {
-					//if we are an iv arm, rather than sending a spike event send a message on ACT: "ARM_R_IV_CATH"
-					if (RV_IS_IV_ARM) {
-						deq_event(&event_buffer); //intentionally discard
-						SEND_ACT(iv_arm_msg);
-						return true;
-					} else { // some other thing that uses the rv code FIXME list them
-						nextevt = deq_event(&event_buffer);
-						event_to_wire(nextevt, Data);
-						*ReportSize = GET_SENSOR_EVENT_REPORT_SIZE;
-						*ReportID = GET_SENSOR_EVENT_REPORT_ID;
-						LEDs_SetAllLEDs(LEDMASK_USB_ERROR);
-						return true;
-					}
-				//pin touch event
-				} else if (pin7_evt_avail) {
-					ms_time_t evt_dur = pin7_evt_dur;
-					ms = pin7_evt_start_host;
-					time_to_wire(ms, Data);
-					uint32_to_wire(evt_dur,Data+8);
-					pin7_evt_avail = 0;
-					*ReportID = WIRE_CONTACT_REPORT_ID;
-					*ReportSize = WIRE_CONTACT_REPORT_SIZE;
-					return true;//pin touch event
-				//send the bio report
-					//} else if (real bio report event) {
-				
-				}
+				FLOW_ACT_MESSAGE_TABLE(AS_ACT_SENDER)
+
 				#if 1
 				else {
 					if (SEND_ADC_DATA) {
@@ -836,14 +668,6 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 					}
 				}
 				#endif
-				/*
-				else {
-					Data[0] = eso_st;
-					*ReportID = NO_DATA_REPORT_ID;
-					*ReportSize = NO_DATA_REPORT_SIZE;
-					return true;
-				}
-				*/
 			}
 	}
 	return false;
@@ -955,7 +779,6 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 			*/
 			if (Data[1]=='S' && Data[2]=='T' && Data[3]=='O' && Data[4]=='P') { // skip length, check first character
 				pulse_stop();
-				fluids_sent = 0;
 			}
 			flow_sensor_handle_ACT((char*) Data);
 			break;
