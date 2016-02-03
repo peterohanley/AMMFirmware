@@ -129,7 +129,8 @@
 
 //*
 #define BIO_REPORT_TABLE(_) \
-	_(HEART_RATE, 13,"f")
+	_(HEART_RATE, 13,"f")\
+	_(ACT,18,"s")
 
 #define BIO_AS_REPORT_STRING(name, num, suffix) #name "=" #num suffix ","
 //*/
