@@ -120,7 +120,6 @@
 
 //*
 #define BIO_REPORT_TABLE(_) \
-	_(HEART_RATE, 13,"f")\
 	_(ACT,18,"s")\
 	_(PROX,19,"s")
 
