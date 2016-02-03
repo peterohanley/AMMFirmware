@@ -221,6 +221,7 @@ void lung_module_task(void)
 		if (!left_press && !right_press && !vent_sitch) {
 			if (now >= (lung_flow_stop_time + BVM_OFF_WAIT_TIME_MS)) {
 				bvm_off_msg_waiting = 1;
+				bvm_sitch = 0;
 				lung_st = LUNG_ZERO_STATE;
 			} else {
 				//do nothing
@@ -265,24 +266,18 @@ void lung_module_task(void)
 				if (!left_press && !right_press) {
 					//send message from the state we left
 					*prevst_msg_waiting = 1;
-					//move to pre-BVM_OFF message state
-					lung_st = WAIT_FOR_BVM_OFF_STATE;
-					lung_flow_stop_time = now;
 				} else if (left_press && !right_press) {
 					//this is physically impossible
 				} else if (right_press && !left_press) {
 					//send mainstem intubation message
 					mainstem_msg_waiting = 1;
-					//move to pre-BVM_OFF message state
-					lung_st = WAIT_FOR_BVM_OFF_STATE;
-					lung_flow_stop_time = now;
 				} else if (right_press && left_press) {
 					//send successful intubation message
 					hypervent_msg_waiting = 1;
-					//move to pre-BVM_OFF message state
-					lung_st = WAIT_FOR_BVM_OFF_STATE;
-					lung_flow_stop_time = now;
 				}
+				//move to pre-BVM_OFF message state
+				lung_st = WAIT_FOR_BVM_OFF_STATE;
+				lung_flow_stop_time = now;
 			} else { // waiting state has not expired
 				if (!left_press && !right_press) {
 					//send message from the state we left
@@ -367,7 +362,7 @@ int main(void)
 	setup_timer();
 	LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
 	GlobalInterruptEnable();
-	setup_airwaysensor();
+	//setup_airwaysensor();
 	//Serial_Init(9600, 0);
 	//eschar_init();
 	//pulse_init(); // moved, so that pulse does not start immediately
@@ -378,7 +373,7 @@ int main(void)
 		HID_Device_USBTask(&Generic_HID_Interface);
 		USB_USBTask();
 		adc_task();
-		airwaysensor_task(adc_values, sensor_varnces, sensor_evt_thresh, &event_buffer);
+		//airwaysensor_task(adc_values, sensor_varnces, sensor_evt_thresh, &event_buffer);
 		lung_module_task();
 		//eschar_task(adc_values);
 		//pulse_task();
@@ -878,6 +873,11 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 			*/
 			if (Data[1]=='S' && Data[2]=='T' && Data[3]=='O' && Data[4]=='P') { // skip length, check first character
 				pulse_stop();
+				lung_st = LUNG_ZERO_STATE;
+				bvm_sitch = 0;
+				vent_sitch = 0;
+				lung_flow_start_time = 0;
+				lung_flow_stop_time = 0;
 			}
 			flow_sensor_handle_ACT((char*) Data);
 			break;
