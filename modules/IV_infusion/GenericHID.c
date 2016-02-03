@@ -360,7 +360,7 @@ MAKE_ESCHAR_MSG(5);
 DEFINE_PSTRING(iv_arm_msg, "ARM_R_IV_CATH");
 
 /* DEVICE NAME */
-DEFINE_PSTRING(device_name_string, "IV_arm");
+DEFINE_PSTRING(device_name_string, "IV_infusion");
 
 /* DEBUG FLOW SENSOR */
 DEFINE_PSTRING(blip_str,"BLIP");
@@ -421,7 +421,7 @@ int main(void)
 	setup_timer();
 	LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
 	GlobalInterruptEnable();
-	setup_airwaysensor();
+	//setup_airwaysensor();
 	//Serial_Init(9600, 0);
 	//eschar_init();
 	//pulse_init(); // moved, so that pulse does not start immediately
@@ -432,7 +432,7 @@ int main(void)
 		HID_Device_USBTask(&Generic_HID_Interface);
 		USB_USBTask();
 		adc_task();
-		airwaysensor_task(adc_values, sensor_varnces, sensor_evt_thresh, &event_buffer);
+		//airwaysensor_task(adc_values, sensor_varnces, sensor_evt_thresh, &event_buffer);
 		//pin7_task();
 		//lung_module_task();
 		//eschar_task(adc_values);
@@ -440,7 +440,7 @@ int main(void)
 		//rfid_task();
 		//parsed_rfid_ready = try_parse_message();
 		
-		//flowsensor_task(adc_values);
+		flowsensor_task(adc_values);
 	}
 }
 
@@ -756,11 +756,15 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 					SEND_ACT(o2_msg_str);
 					o2_msg_waiting = 0;
 					return true;
-				} else if (blip_msg_waiting) {
+				}
+#ifdef SEND_BLIP 
+				else if (blip_msg_waiting) {
 					SEND_ACT(blip_str);
 					blip_msg_waiting = 0;
 					return true;
-				} else if (heat_msg_waiting) {
+				} 
+#endif
+				else if (heat_msg_waiting) {
 					SEND_ACT(heat_str);
 					heat_msg_waiting = 0;
 					return true;

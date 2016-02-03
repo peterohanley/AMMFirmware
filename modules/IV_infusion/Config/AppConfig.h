@@ -114,48 +114,20 @@
 //#define RV_STM_COUNT 4
 //#define RV_STM_ADC_NUMS {1,4,6,7}
 
-#define RV_IS_IV_ARM 1
+#define RV_IS_IV_ARM 0
 
-/* for eschar arm
-#define RV_STM_COUNT 5
-#define RV_STM_ADC_NUMS {6,5,4,1,0}
-//*/
-
-//*for iv arm
+//*for iv infusion
 #define RV_STM_COUNT 1
 #define RV_STM_ADC_NUMS {0}
 //*/
-/* for stomach
-#define RV_STM_COUNT 1
-#define RV_STM_ADC_NUMS {7}
-//*/
-//*
-/*for lungs
-#define RV_STM_COUNT 2
-#define RV_STM_ADC_NUMS {5,7}
-//*/
-
-//#define RV_STM_COUNT 6
-//#define RV_STM_ADC_NUMS {0,1,4,5,6,7}
-
 //controls whether sensor data is sent back
 #define SEND_ADC_DATA 0
-/*
-#define BIO_REPORT_TABLE(_) _(RESPIRATORY_RATE,8,"f")\
-	_(TIDAL_VOLUME, 9,"f")\
-	_(LUNG_VOLUME_TOTAL, 10,"f")\
-	_(LUNG_VOLUME_L, 11,"f")\
-	_(LUNG_VOLUME_R, 12,"f")\
-	_(HEART_RATE, 13,"f")\
-	_(ART, 14,"f")\
-	_(ACT,18,"s")\
-	_(PROX,19,"s")
 
-#define BIO_AS_REPORT_STRING(name, num, suffix) #name "=" #num suffix ","
-//*/
+//send flow sensor debug messages?
+//#define SEND_BLIP
+
 //*
 #define BIO_REPORT_TABLE(_) \
-	_(HEART_RATE, 13,"f")\
 	_(ACT,18,"s")\
 	_(PROX,19,"s")
 
