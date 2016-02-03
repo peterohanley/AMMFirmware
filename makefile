@@ -19,7 +19,7 @@ F_USB        = $(F_CPU)
 OPTIMIZATION = s
 TARGET       = GenericHID
 SRC          = $(TARGET).c Descriptors.c AirwaySensors.c Timer.c RFID.c EscharotomyArm.c FlowSensor.c RunningVariance.c $(LUFA_SRC_USB) $(LUFA_SRC_USBCLASS)
-LUFA_PATH    = ../../../lufa/LUFA
+LUFA_PATH    = ../lufa/LUFA
 CC_FLAGS     = -DUSE_LUFA_CONFIG_HEADER -IConfig/ -Werror -Wshadow -Wextra -Wall
 LD_FLAGS     =
 
