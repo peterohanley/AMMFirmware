@@ -180,10 +180,15 @@ DEFINE_PSTRING(mainstem_msg_str, "MAINSTEM_VENTILATION_ET_TUBE");
 bool hypervent_msg_waiting;
 DEFINE_PSTRING(hypervent_msg_str, "MASK_HYPERVENTILATE_PT");
 
-uint16_t gas_pressure_threshold = 505;
+uint16_t gas_pressure_threshold_left = 1023;
+uint16_t gas_pressure_threshold_right = 1023;
 //how long to wait for the second pressure to appear?
 #define GAS_EVENT_WAIT_TIME 1000
 #define BVM_OFF_WAIT_TIME_MS 5000
+
+#define GAS_PRESSURE_LEARN_TIME_MS 1500
+bool gas_pressure_learned;
+ms_time_t gas_pressure_learning_started;
 
 #define ACT_MSG_ST_RCVD 1
 uint8_t bvm_sitch, vent_sitch;
@@ -202,18 +207,31 @@ typedef enum {
 
 lung_state lung_st = LUNG_ZERO_STATE;
 
+void lung_module_init(void)
+{
+	gas_pressure_learning_started = millis();
+}
 bool empty_msg_waiting; // exists so that prevst_msg_waiting will never be null
 bool* prevst_msg_waiting = &empty_msg_waiting;
 ms_time_t lung_flow_start_time;
 #define GAS_IS_LUNGS
 void lung_module_task(void)
 {
-	//FIXME see if these if branches can be neater
-
-	bool left_press = adc_values[left_bronchus_adc_pin] >= gas_pressure_threshold;
-	bool right_press = adc_values[right_bronchus_adc_pin] >= gas_pressure_threshold;
-	bool anymsg = bvm_sitch || vent_sitch;
+	//learn for a while
 	ms_time_t now = millis();
+	if (!gas_pressure_learned && (now 
+		>= (gas_pressure_learning_started + GAS_PRESSURE_LEARN_TIME_MS))) {
+		gas_pressure_learned = 1;
+		gas_pressure_threshold_left = adc_values[left_bronchus_adc_pin] + 10;
+		gas_pressure_threshold_right = adc_values[right_bronchus_adc_pin] + 10;
+	}
+	bool left_press = gas_pressure_learned ?
+		  adc_values[left_bronchus_adc_pin] >= gas_pressure_threshold_left
+		: 0;
+	bool right_press = gas_pressure_learned ?
+		  adc_values[right_bronchus_adc_pin] >= gas_pressure_threshold_right
+		: 0;
+	bool anymsg = bvm_sitch || vent_sitch;
 	if (lung_st == WAIT_FOR_BVM_OFF_STATE) {
 		//TODO need BVM_OFF_WAIT_TIME_MS of continuous no pressure before sending message
 		if (!left_press && !right_press && !vent_sitch) {
@@ -365,6 +383,7 @@ int main(void)
 	//eschar_init();
 	//pulse_init(); // moved, so that pulse does not start immediately
 	//rfid_init();
+	lung_module_init();
 
 	for (;;)
 	{

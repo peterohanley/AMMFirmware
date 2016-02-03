@@ -231,7 +231,7 @@ void lung_module_task(void)
 		gas_pressure_learned = 1;
 		gas_pressure_threshold	= adc_values[stomach_adc_pin] + 10;
 	}
-	bool eso_press = gas_pressure_threshold ?
+	bool eso_press = gas_pressure_learned ?
 		  adc_values[stomach_adc_pin] >= gas_pressure_threshold
 		: 0;
 	if (!bvm_sitch) {
