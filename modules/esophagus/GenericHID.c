@@ -198,10 +198,14 @@ unsigned char hypervent_msg_waiting;
 DEFINE_PSTRING(hypervent_msg_str, "MASK_HYPERVENTILATE_PT");
 bool mask_main_exclusion;
 
-uint16_t gas_pressure_threshold = 505;
 #define GAS_EVENT_WAIT_TIME 1000
 #define WAIT_FOR_BOTH_PRESSURES_MS 3000
 #define BVM_OFF_WAIT_TIME_MS 5000
+
+#define GAS_PRESSURE_LEARN_TIME_MS 1500
+bool gas_pressure_learned;
+ms_time_t gas_pressure_learning_started;
+uint16_t gas_pressure_threshold = 1023;
 
 #define ACT_MSG_ST_RCVD 1
 uint8_t bvm_sitch, vent_sitch;
@@ -213,88 +217,23 @@ uint8_t esophageal_st;
 uint8_t o2_msg_waiting;
 DEFINE_PSTRING(o2_msg_str,"O2");
 
+void lung_module_init(void) {
+	gas_pressure_learning_started = millis();
+}
 
-//#define GAS_IS_LUNGS
 void lung_module_task(void)
 {
-	//FIXME see if these if branches can be neater
-#ifdef GAS_IS_LUNGS
-	/*
-	bool leftpress = adc_values[left_bronchus_adc_pin] >= gas_pressure_threshold;
-	bool rightpress = adc_values[right_bronchus_adc_pin] >= gas_pressure_threshold;
-	if (!right_bronchus_evt_occuring) {
-		if (rightpress) {
-			right_bronchus_evt_occuring = 1;
-			if (leftpress) {
-				//send success message
-				bronchus_success_evt_waiting = 1;
-				left_bronchus_evt_occuring = 1;
-			} else {
-				//send failure message
-				left_bronchus_evt_occuring = 0;
-				bronchus_mainstem_evt_waiting = 1;
-			}
-		}
-	} else if (adc_values[right_bronchus_adc_pin] < gas_pressure_threshold) {
-		right_bronchus_evt_occuring = 0;
+
+	ms_time_t now = millis();
+	//learn for a while
+	if (!gas_pressure_learned && (now 
+		>= (gas_pressure_learning_started + GAS_PRESSURE_LEARN_TIME_MS))) {
+		gas_pressure_learned = 1;
+		gas_pressure_threshold	= adc_values[stomach_adc_pin] + 10;
 	}
-	*/
-	bool left_press = adc_values[left_bronchus_adc_pin] >= gas_pressure_threshold;
-	bool right_press = adc_values[right_bronchus_adc_pin] >= gas_pressure_threshold;
-	bool anymsg = bvm_sitch || vent_sitch;
-	if (!anymsg) {
-		lung_st = 0;
-	} else if (!right_press && !left_press) {
-		if (lung_st == 0) {
-			lung_st = 1;
-			//no message
-		} else if (lung_st == 3 || lung_st == 4 || lung_st == 5) {
-			lung_flow_stop_time = millis();
-			lung_st = 2;
-		} else if (lung_st == 2) {
-			ms_time_t now = millis();
-			if (now - lung_flow_stop_time > BVM_OFF_WAIT_TIME_MS) {
-				bvm_off_msg_waiting = 1;
-				//re-enable mask/mainstem
-				mask_main_exclusion = 0;
-				bvm_sitch = 0;
-				lung_st = 1;
-			}
-		}
-	} else if (right_press && !left_press && bvm_sitch) {
-		if ((lung_st == 0 || lung_st == 1 || lung_st == 3) && !mask_main_exclusion) {
-			lung_st = 4;
-			mainstem_msg_waiting = 1;
-			mask_main_exclusion = 1;
-		}
-	} else if (right_press && left_press) {
-		if (vent_sitch) {
-			vent_msg_waiting = 1;
-			lung_st = 5;
-		} else if (bvm_sitch) {
-			if ((lung_st == 0 || lung_st == 1 || lung_st == 4) && !mask_main_exclusion) {
-				hypervent_msg_waiting = 1;
-				mask_main_exclusion = 1;
-				lung_st = 3;
-			}
-		}
-	}
-	
-#else
-	bool eso_press = adc_values[stomach_adc_pin] >= gas_pressure_threshold;
-	/*
-	if (stomach_evt_occuring) {
-		if (adc_values[stomach_adc_pin] < gas_pressure_threshold) {
-			stomach_evt_occuring = 0; // don't send again
-			stomach_evt_waiting = 0; // don't send down message 
-		}
-	} else {
-		if (adc_values[stomach_adc_pin] > gas_pressure_threshold) {
-			stomach_evt_occuring = 1;
-			stomach_evt_waiting = EVT_UP;
-		}
-	}
-	*/
+	bool eso_press = gas_pressure_threshold ?
+		  adc_values[stomach_adc_pin] >= gas_pressure_threshold
+		: 0;
 	if (!bvm_sitch) {
 		eso_st = 0;
 	} else {
@@ -310,7 +249,6 @@ void lung_module_task(void)
 			} else if (eso_st == 0) {
 				eso_st = 1;
 			} else if (eso_st == 2) {
-				ms_time_t now = millis();
 				if (now - eso_flow_stop_time > BVM_OFF_WAIT_TIME_MS) {
 					bvm_off_msg_waiting = 1;
 					bvm_sitch = 0;
@@ -318,7 +256,6 @@ void lung_module_task(void)
 			}
 		}
 	}
-#endif
 }
 
 /* code for echoing PROX to ACT */
@@ -381,6 +318,7 @@ int main(void)
 	LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
 	GlobalInterruptEnable();
 	//setup_airwaysensor();
+	lung_module_init();
 
 	for (;;)
 	{
