@@ -6,7 +6,9 @@
 #include <LUFA/Common/Common.h>
 #include "Timer.h"
 
-#define TIME_THRESH_DRUG 300
+//250 too sensitive
+//300 too sensitive
+#define TIME_THRESH_DRUG 450
 #define TIME_THRESH_DRIP 1000
 
 #define FLOW_ACT_MESSAGE_TABLE(_) \

@@ -222,8 +222,8 @@ void lung_module_task(void)
 	if (!gas_pressure_learned && (now 
 		>= (gas_pressure_learning_started + GAS_PRESSURE_LEARN_TIME_MS))) {
 		gas_pressure_learned = 1;
-		gas_pressure_threshold_left = adc_values[left_bronchus_adc_pin] + 5;
-		gas_pressure_threshold_right = adc_values[right_bronchus_adc_pin] + 5;
+		gas_pressure_threshold_left = adc_values[left_bronchus_adc_pin] + 3;
+		gas_pressure_threshold_right = adc_values[right_bronchus_adc_pin] + 3;
 	}
 	bool left_press = gas_pressure_learned ?
 		  adc_values[left_bronchus_adc_pin] >= gas_pressure_threshold_left
