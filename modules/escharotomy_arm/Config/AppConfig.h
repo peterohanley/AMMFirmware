@@ -114,29 +114,12 @@
 //#define RV_STM_COUNT 4
 //#define RV_STM_ADC_NUMS {1,4,6,7}
 
-#define RV_IS_IV_ARM 1
+#define RV_IS_IV_ARM 0
 
-/* for eschar arm
+//* for eschar arm
 #define RV_STM_COUNT 5
 #define RV_STM_ADC_NUMS {6,5,4,1,0}
 //*/
-
-//*for iv arm
-#define RV_STM_COUNT 1
-#define RV_STM_ADC_NUMS {0}
-//*/
-/* for stomach
-#define RV_STM_COUNT 1
-#define RV_STM_ADC_NUMS {7}
-//*/
-//*
-/*for lungs
-#define RV_STM_COUNT 2
-#define RV_STM_ADC_NUMS {5,7}
-//*/
-
-//#define RV_STM_COUNT 6
-//#define RV_STM_ADC_NUMS {0,1,4,5,6,7}
 
 //controls whether sensor data is sent back
 #define SEND_ADC_DATA 0

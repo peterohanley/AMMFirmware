@@ -360,7 +360,7 @@ MAKE_ESCHAR_MSG(5);
 DEFINE_PSTRING(iv_arm_msg, "ARM_R_IV_CATH");
 
 /* DEVICE NAME */
-DEFINE_PSTRING(device_name_string, "IV_arm");
+DEFINE_PSTRING(device_name_string, "escharotomy_arm");
 
 /* DEBUG FLOW SENSOR */
 DEFINE_PSTRING(blip_str,"BLIP");
@@ -421,9 +421,9 @@ int main(void)
 	setup_timer();
 	LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
 	GlobalInterruptEnable();
-	setup_airwaysensor();
+	//setup_airwaysensor();
 	//Serial_Init(9600, 0);
-	//eschar_init();
+	eschar_init();
 	//pulse_init(); // moved, so that pulse does not start immediately
 	//rfid_init();
 
@@ -432,11 +432,11 @@ int main(void)
 		HID_Device_USBTask(&Generic_HID_Interface);
 		USB_USBTask();
 		adc_task();
-		airwaysensor_task(adc_values, sensor_varnces, sensor_evt_thresh, &event_buffer);
+		//airwaysensor_task(adc_values, sensor_varnces, sensor_evt_thresh, &event_buffer);
 		//pin7_task();
 		//lung_module_task();
-		//eschar_task(adc_values);
-		//pulse_task();
+		eschar_task(adc_values);
+		pulse_task();
 		//rfid_task();
 		//parsed_rfid_ready = try_parse_message();
 		
