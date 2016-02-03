@@ -160,165 +160,152 @@ DEFINE_PSTRING(bio_report_string,BIO_REPORT_TABLE(BIO_AS_REPORT_STRING));
 /* RFID CODE VARIABLES */
 bool parsed_rfid_ready;
 
-/* FLOW RATE VARIABLES */
-//TODO
-
 /* GAS THRESHOLD DETECTOR VARIABLES */
-//TODO these will be 2 seperate modules, so make them function correctly
 
 #define EVT_DOWN 1
 #define EVT_UP 2
-//stomach
-DEFINE_PSTRING(esophageal_msg_str, "ESOPHAGEAL_VENTILATION_ET_TUBE");
-ms_time_t stomach_last_sent_event;
-#define stomach_adc_pin 7
-uint8_t esophageal_msg_waiting;
-uint8_t eso_st;
-ms_time_t eso_flow_stop_time;
-bool stomach_evt_occuring;
-
-
-
-
 
 #define right_bronchus_adc_pin 5
-bool right_bronchus_evt_occuring;
+//bool right_bronchus_evt_occuring;
 
 #define left_bronchus_adc_pin 7
-bool left_bronchus_evt_occuring;
+//bool left_bronchus_evt_occuring;
 ms_time_t lung_flow_stop_time;
-unsigned char lung_st;
-unsigned char vent_msg_waiting;
+//unsigned char lung_st;
+
+bool vent_msg_waiting;
 DEFINE_PSTRING(vent_msg_str,"VENTILATION_ET_TUBE");
-unsigned char bvm_off_msg_waiting;
+bool bvm_off_msg_waiting;
 DEFINE_PSTRING(bvm_off_msg_str,"BVM_OFF");
-unsigned char mainstem_msg_waiting;
+bool mainstem_msg_waiting;
 DEFINE_PSTRING(mainstem_msg_str, "MAINSTEM_VENTILATION_ET_TUBE");
-unsigned char hypervent_msg_waiting;
+bool hypervent_msg_waiting;
 DEFINE_PSTRING(hypervent_msg_str, "MASK_HYPERVENTILATE_PT");
-bool mask_main_exclusion;
 
 uint16_t gas_pressure_threshold = 505;
+//how long to wait for the second pressure to appear?
 #define GAS_EVENT_WAIT_TIME 1000
-#define WAIT_FOR_BOTH_PRESSURES_MS 3000
-#define BVM_OFF_WAIT_TIME_MS 3000
+#define BVM_OFF_WAIT_TIME_MS 5000
 
 #define ACT_MSG_ST_RCVD 1
 uint8_t bvm_sitch, vent_sitch;
-
-#define ESOPHAGEAL_ST_1 1
-uint8_t esophageal_st;
 
 //workaround
 uint8_t o2_msg_waiting;
 DEFINE_PSTRING(o2_msg_str,"O2");
 
+typedef enum {
+	LUNG_ZERO_STATE,
+	//states go here
+	RIGHT_PRESSURE_WAITING_STATE,
+	LEFT_PRESSURE_WAITING_STATE,
+	WAIT_FOR_BVM_OFF_STATE,
+} lung_state;
 
+lung_state lung_st = LUNG_ZERO_STATE;
+
+bool empty_msg_waiting; // exists so that prevst_msg_waiting will never be null
+bool* prevst_msg_waiting = &empty_msg_waiting;
+ms_time_t lung_flow_start_time;
 #define GAS_IS_LUNGS
 void lung_module_task(void)
 {
 	//FIXME see if these if branches can be neater
-#ifdef GAS_IS_LUNGS
-	/*
-	bool leftpress = adc_values[left_bronchus_adc_pin] >= gas_pressure_threshold;
-	bool rightpress = adc_values[right_bronchus_adc_pin] >= gas_pressure_threshold;
-	if (!right_bronchus_evt_occuring) {
-		if (rightpress) {
-			right_bronchus_evt_occuring = 1;
-			if (leftpress) {
-				//send success message
-				bronchus_success_evt_waiting = 1;
-				left_bronchus_evt_occuring = 1;
-			} else {
-				//send failure message
-				left_bronchus_evt_occuring = 0;
-				bronchus_mainstem_evt_waiting = 1;
-			}
-		}
-	} else if (adc_values[right_bronchus_adc_pin] < gas_pressure_threshold) {
-		right_bronchus_evt_occuring = 0;
-	}
-	*/
+
 	bool left_press = adc_values[left_bronchus_adc_pin] >= gas_pressure_threshold;
 	bool right_press = adc_values[right_bronchus_adc_pin] >= gas_pressure_threshold;
 	bool anymsg = bvm_sitch || vent_sitch;
-	if (!anymsg) {
-		lung_st = 0;
-	} else if (!right_press && !left_press) {
-		if (lung_st == 0) {
-			lung_st = 1;
-			//no message
-		} else if (lung_st == 3 || lung_st == 4 || lung_st == 5) {
-			lung_flow_stop_time = millis();
-			lung_st = 2;
-		} else if (lung_st == 2) {
-			ms_time_t now = millis();
-			if (now - lung_flow_stop_time > BVM_OFF_WAIT_TIME_MS) {
+	ms_time_t now = millis();
+	if (lung_st == WAIT_FOR_BVM_OFF_STATE) {
+		//TODO need BVM_OFF_WAIT_TIME_MS of continuous no pressure before sending message
+		if (!left_press && !right_press && !vent_sitch) {
+			if (now >= (lung_flow_stop_time + BVM_OFF_WAIT_TIME_MS)) {
 				bvm_off_msg_waiting = 1;
-				//re-enable mask/mainstem
-				mask_main_exclusion = 0;
-				bvm_sitch = 0;
-				lung_st = 1;
-			}
-		}
-	} else if (right_press && !left_press && bvm_sitch) {
-		if ((lung_st == 0 || lung_st == 1 || lung_st == 3) && !mask_main_exclusion) {
-			lung_st = 4;
-			mainstem_msg_waiting = 1;
-			mask_main_exclusion = 1;
-		}
-	} else if (right_press && left_press) {
-		if (vent_sitch) {
-			vent_msg_waiting = 1;
-			lung_st = 5;
-		} else if (bvm_sitch) {
-			if ((lung_st == 0 || lung_st == 1 || lung_st == 4) && !mask_main_exclusion) {
-				hypervent_msg_waiting = 1;
-				mask_main_exclusion = 1;
-				lung_st = 3;
-			}
-		}
-	}
-	
-#else
-	bool eso_press = adc_values[stomach_adc_pin] >= gas_pressure_threshold;
-	/*
-	if (stomach_evt_occuring) {
-		if (adc_values[stomach_adc_pin] < gas_pressure_threshold) {
-			stomach_evt_occuring = 0; // don't send again
-			stomach_evt_waiting = 0; // don't send down message 
-		}
-	} else {
-		if (adc_values[stomach_adc_pin] > gas_pressure_threshold) {
-			stomach_evt_occuring = 1;
-			stomach_evt_waiting = EVT_UP;
-		}
-	}
-	*/
-	if (!bvm_sitch) {
-		eso_st = 0;
-	} else {
-		if (eso_press) {
-			if (eso_st == 0 || eso_st == 1) {
-				esophageal_msg_waiting = 1;
-				eso_st = 3;
+				lung_st = LUNG_ZERO_STATE;
+			} else {
+				//do nothing
 			}
 		} else {
-			if (eso_st == 3) {
-				eso_flow_stop_time = millis();
-				eso_st = 2;
-			} else if (eso_st == 0) {
-				eso_st = 1;
-			} else if (eso_st == 2) {
-				ms_time_t now = millis();
-				if (now - eso_flow_stop_time > 2000) {
-					bvm_off_msg_waiting = 1;
-					bvm_sitch = 0;
+			lung_flow_stop_time = now;
+		}
+	} else if (!anymsg) {
+		//do nothing
+	} else {
+	// if we have one pressure, move to a waiting state to see if pressure in the other appears
+	//if at any point both are on, send message, move to waiting state
+	//if wait period is reached without change in pressure state, send appropriate message (possibyl none)
+	//if pressures go down before end of wait state, send message as if that state was reached at the end of wait state and move to waiting for pressure to go down in order to send BVM_OFF message.
+		if (/*we are not in the waiting state */ 
+			(lung_st != RIGHT_PRESSURE_WAITING_STATE)
+		&& (lung_st != LEFT_PRESSURE_WAITING_STATE)) {
+			if (!left_press && !right_press) {
+				//stay in this state, no action
+			} else if (left_press && !right_press) {
+				//set waiting start variable
+				lung_flow_start_time = now;
+				//go to LEFT_PRESSURE_WAITING_STATE
+				lung_st = LEFT_PRESSURE_WAITING_STATE;
+				prevst_msg_waiting = &empty_msg_waiting;
+			} else if (right_press && !left_press) {
+				//set waiting start variable
+				lung_flow_start_time = now;
+				//go to RIGHT_PRESSURE_WAITING_STATE
+				lung_st = RIGHT_PRESSURE_WAITING_STATE;
+				prevst_msg_waiting = &mainstem_msg_waiting;
+			} else if (right_press && left_press) {
+				//send successful intubation message
+				hypervent_msg_waiting = 1;
+				//move to pre-BVM_OFF message state
+				lung_st = WAIT_FOR_BVM_OFF_STATE;
+				lung_flow_stop_time = now;
+			}
+		} else { // so we are in the waiting state
+			if (/*waiting state has expired*/
+			now >= (lung_flow_start_time + GAS_EVENT_WAIT_TIME)) {
+				if (!left_press && !right_press) {
+					//send message from the state we left
+					*prevst_msg_waiting = 1;
+					//move to pre-BVM_OFF message state
+					lung_st = WAIT_FOR_BVM_OFF_STATE;
+					lung_flow_stop_time = now;
+				} else if (left_press && !right_press) {
+					//this is physically impossible
+				} else if (right_press && !left_press) {
+					//send mainstem intubation message
+					mainstem_msg_waiting = 1;
+					//move to pre-BVM_OFF message state
+					lung_st = WAIT_FOR_BVM_OFF_STATE;
+					lung_flow_stop_time = now;
+				} else if (right_press && left_press) {
+					//send successful intubation message
+					hypervent_msg_waiting = 1;
+					//move to pre-BVM_OFF message state
+					lung_st = WAIT_FOR_BVM_OFF_STATE;
+					lung_flow_stop_time = now;
+				}
+			} else { // waiting state has not expired
+				if (!left_press && !right_press) {
+					//send message from the state we left
+					*prevst_msg_waiting = 1;
+					//move to pre-BVM_OFF message state
+					lung_st = WAIT_FOR_BVM_OFF_STATE;
+					lung_flow_stop_time = now;
+				} else if (left_press && !right_press) {
+					//remain in left pressure waiting state
+					//we can do this by doing nothing
+				} else if (right_press && !left_press) {
+					//remain in right pressure waiting state
+					//we can do this by doing nothing
+				} else if (right_press && left_press) {
+					//send successful intubation message
+					hypervent_msg_waiting = 1;
+					//move to pre-BVM_OFF message state
+					lung_st = WAIT_FOR_BVM_OFF_STATE;
+					lung_flow_stop_time = now;
 				}
 			}
 		}
 	}
-#endif
 }
 
 /* code for echoing PROX to ACT */
@@ -360,7 +347,7 @@ MAKE_ESCHAR_MSG(5);
 DEFINE_PSTRING(iv_arm_msg, "ARM_R_IV_CATH");
 
 /* DEVICE NAME */
-DEFINE_PSTRING(device_name_string, "IV_arm");
+DEFINE_PSTRING(device_name_string, "airway");
 
 /* DEBUG FLOW SENSOR */
 DEFINE_PSTRING(blip_str,"BLIP");
@@ -371,47 +358,6 @@ bool heat_msg_waiting;
 /* FLOW SENSOR VARIABLES */
 FLOW_ACT_MESSAGE_TABLE(AS_ACT_STR);
 
-
-/* PIN BUMP DETECTOR VARIABLES */
-
-typedef enum e_pinstmstate {
-	PS_NO_CONTACT,
-	PS_DURING_CONTACT
-} pin_stm_state;
-pin_stm_state pstm_st = PS_NO_CONTACT;
-TIME_t pin7_start_time_host;
-ms_time_t pin7_start_time;
-//time_t pin7_end_time; /* probably not useful */
-bool pin7_evt_avail;
-TIME_t pin7_evt_start_host;
-ms_time_t pin7_evt_dur;
-void pin7_task(void)
-{
-	bool pin7on = ! (PINE & (1<<PE6));
-	ms_time_t pin7_end_time;
-	switch (pstm_st) {
-		case PS_NO_CONTACT:
-		if (pin7on) {
-			/* TODO maybe ensure these have the same millisecond value */
-			pin7_start_time_host = host_millis();
-			pin7_start_time = millis();
-			pstm_st = PS_DURING_CONTACT;
-		} else {
-			/* no action */
-		}
-		break;
-		case PS_DURING_CONTACT:
-		if (pin7on) {
-			/* no action */
-		} else {
-			pin7_end_time = millis();
-			pstm_st = PS_NO_CONTACT;
-			pin7_evt_start_host = pin7_start_time_host;
-			pin7_evt_dur = pin7_end_time - pin7_start_time;
-			pin7_evt_avail = 1;
-		}
-	}
-}
 /** Main program entry point. This routine contains the overall program flow, including initial
  *  setup of all components and the main program loop.
  */
@@ -433,8 +379,7 @@ int main(void)
 		USB_USBTask();
 		adc_task();
 		airwaysensor_task(adc_values, sensor_varnces, sensor_evt_thresh, &event_buffer);
-		//pin7_task();
-		//lung_module_task();
+		lung_module_task();
 		//eschar_task(adc_values);
 		//pulse_task();
 		//rfid_task();
@@ -732,11 +677,7 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 					return true;
 				}
 #endif
-				else if (esophageal_msg_waiting) {
-					SEND_ACT(esophageal_msg_str);
-					esophageal_msg_waiting = 0;
-					return true;
-				} else if (vent_msg_waiting) {
+				else if (vent_msg_waiting) {
 					SEND_ACT(vent_msg_str);
 					vent_msg_waiting = 0;
 					return true;
@@ -765,7 +706,6 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 					heat_msg_waiting = 0;
 					return true;
 				}
-				//TODO
 #define AS_ACT_SENDER(s) \
 	if (s##_msg_waiting) {\
 		SEND_ACT(pstr_##s);\
@@ -800,19 +740,6 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 						LEDs_SetAllLEDs(LEDMASK_USB_ERROR);
 						return true;
 					}
-				//pin touch event
-				} else if (pin7_evt_avail) {
-					ms_time_t evt_dur = pin7_evt_dur;
-					ms = pin7_evt_start_host;
-					time_to_wire(ms, Data);
-					uint32_to_wire(evt_dur,Data+8);
-					pin7_evt_avail = 0;
-					*ReportID = WIRE_CONTACT_REPORT_ID;
-					*ReportSize = WIRE_CONTACT_REPORT_SIZE;
-					return true;//pin touch event
-				//send the bio report
-					//} else if (real bio report event) {
-				
 				}
 				#if 1
 				else {

@@ -418,12 +418,12 @@ void pin7_task(void)
 int main(void)
 {
 	SetupHardware();
-	//setup_timer();
+	setup_timer();
 	LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
 	GlobalInterruptEnable();
 	//setup_airwaysensor();
 	//Serial_Init(9600, 0);
-	//eschar_init();
+	eschar_init();
 	//pulse_init(); // moved, so that pulse does not start immediately
 	//rfid_init();
 
@@ -436,7 +436,7 @@ int main(void)
 		//pin7_task();
 		//lung_module_task();
 		//eschar_task(adc_values);
-		//pulse_task();
+		pulse_task();
 		//rfid_task();
 		//parsed_rfid_ready = try_parse_message();
 		

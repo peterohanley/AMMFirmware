@@ -360,7 +360,7 @@ MAKE_ESCHAR_MSG(5);
 DEFINE_PSTRING(iv_arm_msg, "ARM_R_IV_CATH");
 
 /* DEVICE NAME */
-DEFINE_PSTRING(device_name_string, "IV_arm");
+DEFINE_PSTRING(device_name_string, "RFID_proximity");
 
 /* DEBUG FLOW SENSOR */
 DEFINE_PSTRING(blip_str,"BLIP");
@@ -371,47 +371,6 @@ bool heat_msg_waiting;
 /* FLOW SENSOR VARIABLES */
 FLOW_ACT_MESSAGE_TABLE(AS_ACT_STR);
 
-
-/* PIN BUMP DETECTOR VARIABLES */
-
-typedef enum e_pinstmstate {
-	PS_NO_CONTACT,
-	PS_DURING_CONTACT
-} pin_stm_state;
-pin_stm_state pstm_st = PS_NO_CONTACT;
-TIME_t pin7_start_time_host;
-ms_time_t pin7_start_time;
-//time_t pin7_end_time; /* probably not useful */
-bool pin7_evt_avail;
-TIME_t pin7_evt_start_host;
-ms_time_t pin7_evt_dur;
-void pin7_task(void)
-{
-	bool pin7on = ! (PINE & (1<<PE6));
-	ms_time_t pin7_end_time;
-	switch (pstm_st) {
-		case PS_NO_CONTACT:
-		if (pin7on) {
-			/* TODO maybe ensure these have the same millisecond value */
-			pin7_start_time_host = host_millis();
-			pin7_start_time = millis();
-			pstm_st = PS_DURING_CONTACT;
-		} else {
-			/* no action */
-		}
-		break;
-		case PS_DURING_CONTACT:
-		if (pin7on) {
-			/* no action */
-		} else {
-			pin7_end_time = millis();
-			pstm_st = PS_NO_CONTACT;
-			pin7_evt_start_host = pin7_start_time_host;
-			pin7_evt_dur = pin7_end_time - pin7_start_time;
-			pin7_evt_avail = 1;
-		}
-	}
-}
 /** Main program entry point. This routine contains the overall program flow, including initial
  *  setup of all components and the main program loop.
  */
@@ -421,26 +380,23 @@ int main(void)
 	setup_timer();
 	LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
 	GlobalInterruptEnable();
-	setup_airwaysensor();
-	//Serial_Init(9600, 0);
-	//eschar_init();
-	//pulse_init(); // moved, so that pulse does not start immediately
-	//rfid_init();
+	//setup_airwaysensor();
+	Serial_Init(9600, 0);
+	rfid_init();
 
 	for (;;)
 	{
 		HID_Device_USBTask(&Generic_HID_Interface);
 		USB_USBTask();
-		adc_task();
-		airwaysensor_task(adc_values, sensor_varnces, sensor_evt_thresh, &event_buffer);
+		//adc_task();
+		//airwaysensor_task(adc_values, sensor_varnces, sensor_evt_thresh, &event_buffer);
 		//pin7_task();
 		//lung_module_task();
 		//eschar_task(adc_values);
 		//pulse_task();
-		//rfid_task();
-		//parsed_rfid_ready = try_parse_message();
+		rfid_task();
+		parsed_rfid_ready = try_parse_message();
 		
-		//flowsensor_task(adc_values);
 	}
 }
 
@@ -800,20 +756,7 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 						LEDs_SetAllLEDs(LEDMASK_USB_ERROR);
 						return true;
 					}
-				//pin touch event
-				} else if (pin7_evt_avail) {
-					ms_time_t evt_dur = pin7_evt_dur;
-					ms = pin7_evt_start_host;
-					time_to_wire(ms, Data);
-					uint32_to_wire(evt_dur,Data+8);
-					pin7_evt_avail = 0;
-					*ReportID = WIRE_CONTACT_REPORT_ID;
-					*ReportSize = WIRE_CONTACT_REPORT_SIZE;
-					return true;//pin touch event
-				//send the bio report
-					//} else if (real bio report event) {
-				
-				}
+				} 
 				#if 1
 				else {
 					if (SEND_ADC_DATA) {
