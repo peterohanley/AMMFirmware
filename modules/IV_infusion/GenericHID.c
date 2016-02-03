@@ -642,7 +642,7 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 		//this will allow better operation with multiple reports, and allow each module's variables to be encapsulated in their files
 			
 			if (*ReportID == 0) {
-#define AS_ACT_SENDER(s) \
+#define AS_ACT_SENDER(s,str,tt) \
 	if (s##_msg_waiting) {\
 		SEND_ACT(pstr_##s);\
 		s##_msg_waiting = 0;\

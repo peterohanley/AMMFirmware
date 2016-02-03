@@ -3,7 +3,8 @@
 #define DOWN 0
 #define UP 1
 #define THRESH 512
-#define TIME_THRESH 250
+
+ms_time_t time_thresh = TIME_THRESH_DRUG;
 #define SENSOR_PIN 0
 uint8_t last_fs_st;
 ms_time_t last_blip;
@@ -17,7 +18,7 @@ bool iv_connected;
 FLOW_ACT_MESSAGE_TABLE(AS_RCV_STR);
 
 void flow_enum_set_waiting(flow_messages k) {
-#define AS_FLOW2ENUM_CASE(str) if (k == el_##str) {str##_msg_waiting = 1;return;}
+#define AS_FLOW2ENUM_CASE(str,s,tt) if (k == el_##str) {str##_msg_waiting = 1;return;}
 	FLOW_ACT_MESSAGE_TABLE(AS_FLOW2ENUM_CASE);
 	return;
 }
@@ -27,31 +28,33 @@ void flowsensor_task(uint16_t* adc_values)
 {
 	ms_time_t now = millis();
 	
-	if (((last_fs_st == DOWN && adc_values[SENSOR_PIN] > THRESH) ||
+	if ((last_fs_st == DOWN && adc_values[SENSOR_PIN] > THRESH) ||
 		(last_fs_st == UP && adc_values[SENSOR_PIN] < THRESH))
-	&& (now >= (last_blip + 20))) {
+		 {
 		last_fs_st = !last_fs_st;
 		
 		//blip_msg_waiting = 1;
-		if (now <= (last_blip + TIME_THRESH)) {
+		if (now <= (last_blip + time_thresh)) {
 			//fast! probably an iv!
 			if (iv_connected && (last_flowmsg_rcvd != NO_FLOW_MESSAGE)) {
 				flow_enum_set_waiting(last_flowmsg_rcvd);
 				last_flowmsg_rcvd = NO_FLOW_MESSAGE;
+				time_thresh = TIME_THRESH_DRUG;
 			}
 		}
 		last_blip = now;
 	}
 	
 	//now message sending logic based on simple delays
-#define AS_DELAY_HANDLER(s) do {\
+#if 0
+#define AS_DELAY_HANDLER(s,tt) do {\
 	if (now >= (HACK_msg_rcvd_##s + MESSAGE_DELAY_TIME) && HACK_msg_sendable_##s && iv_connected) {\
 		s##_msg_waiting = 1;\
 		HACK_msg_sendable_##s = 0;\
 	}\
 	} while (0);
 	FLOW_ACT_MESSAGE_TABLE(AS_DELAY_HANDLER);
-	
+#endif	
 }
 
 
@@ -72,8 +75,7 @@ void flow_sensor_handle_PROX(char* data)
 	//real
 	//#define AS_ACT_CMP_CASE(s) if (!ram_prog_cmp(data,(char*)&pstr_rcv_##s,MIN(data[0],pstr_rcv_##s .len))) {last_flowmsg_rcvd = el_##s;return;} 
 	//hacky
-	ms_time_t now = millis();
-#define AS_ACT_CMP_CASE(s) if (!ram_prog_cmp(data,(char*)&pstr_rcv_##s,MIN(data[0],pstr_rcv_##s .len))) {last_flowmsg_rcvd = el_##s;HACK_msg_rcvd_##s = now;HACK_msg_sendable_##s=1;return;} 
+#define AS_ACT_CMP_CASE(s,str,tt) if (!ram_prog_cmp(data,(char*)&pstr_rcv_##s,MIN(data[0],pstr_rcv_##s .len))) {last_flowmsg_rcvd = el_##s;time_thresh=tt;return;} 
 	
 	FLOW_ACT_MESSAGE_TABLE(AS_ACT_CMP_CASE);
 	//determine which string it is
