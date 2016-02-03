@@ -169,9 +169,7 @@ bool parsed_rfid_ready;
 //bool right_bronchus_evt_occuring;
 
 #define left_bronchus_adc_pin 7
-//bool left_bronchus_evt_occuring;
 ms_time_t lung_flow_stop_time;
-//unsigned char lung_st;
 
 bool vent_msg_waiting;
 DEFINE_PSTRING(vent_msg_str,"VENTILATION_ET_TUBE");

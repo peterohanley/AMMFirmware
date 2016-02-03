@@ -15,7 +15,8 @@
 	_(ANTIBIOTICS)\
 	_(PROPOFOL)\
 	_(LIDOCANE)\
-	_(ROC)
+	_(ROC)\
+	_(FLUIDS)
 
 #define AS_ACT_STR(s) DEFINE_PSTRING(pstr_##s,"GIVE_" #s);
 #define AS_RCV_STR(s) DEFINE_PSTRING(pstr_rcv_##s,#s);
@@ -31,7 +32,7 @@ typedef enum {
 FLOW_ACT_MESSAGE_TABLE(AS_W8ING_BOOL);
 
 bool blip_msg_waiting;
-//bool flowmessage_waiting;
+bool fluids_sent;
 ms_time_t last_blip;
 bool dur_waiting;
 

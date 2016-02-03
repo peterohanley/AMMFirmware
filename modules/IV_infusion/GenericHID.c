@@ -955,6 +955,7 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 			*/
 			if (Data[1]=='S' && Data[2]=='T' && Data[3]=='O' && Data[4]=='P') { // skip length, check first character
 				pulse_stop();
+				fluids_sent = 0;
 			}
 			flow_sensor_handle_ACT((char*) Data);
 			break;

@@ -11,7 +11,8 @@ ms_time_t last_blip;
 flow_messages last_flowmsg_rcvd = NO_FLOW_MESSAGE; //el_PROPOFOL;
 uint8_t fs_module_st;
 extern bool blip_msg_waiting;
-bool iv_connected ;
+bool iv_connected;
+extern bool fluids_sent;
 
 //TODO don't store them twice if possible
 FLOW_ACT_MESSAGE_TABLE(AS_RCV_STR);
@@ -31,7 +32,12 @@ void flowsensor_task(uint16_t* adc_values)
 		(last_fs_st == DOWN && adc_values[SENSOR_PIN] > THRESH)) {
 		last_fs_st = !last_fs_st;
 		
-		blip_msg_waiting = 1;
+		if (!fluids_sent) {
+			
+			flow_enum_set_waiting(el_FLUIDS);
+			fluids_sent = 1;
+		}
+		//blip_msg_waiting = 1;
 		if (now <= (last_blip + TIME_THRESH)) {
 			//fast! probably an iv!
 			if (iv_connected && (last_flowmsg_rcvd != NO_FLOW_MESSAGE)) {
