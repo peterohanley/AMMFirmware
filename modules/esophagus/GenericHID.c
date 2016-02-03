@@ -201,7 +201,7 @@ bool mask_main_exclusion;
 uint16_t gas_pressure_threshold = 505;
 #define GAS_EVENT_WAIT_TIME 1000
 #define WAIT_FOR_BOTH_PRESSURES_MS 3000
-#define BVM_OFF_WAIT_TIME_MS 3000
+#define BVM_OFF_WAIT_TIME_MS 5000
 
 #define ACT_MSG_ST_RCVD 1
 uint8_t bvm_sitch, vent_sitch;
@@ -214,7 +214,7 @@ uint8_t o2_msg_waiting;
 DEFINE_PSTRING(o2_msg_str,"O2");
 
 
-#define GAS_IS_LUNGS
+//#define GAS_IS_LUNGS
 void lung_module_task(void)
 {
 	//FIXME see if these if branches can be neater
@@ -311,7 +311,7 @@ void lung_module_task(void)
 				eso_st = 1;
 			} else if (eso_st == 2) {
 				ms_time_t now = millis();
-				if (now - eso_flow_stop_time > 2000) {
+				if (now - eso_flow_stop_time > BVM_OFF_WAIT_TIME_MS) {
 					bvm_off_msg_waiting = 1;
 					bvm_sitch = 0;
 				}
@@ -360,7 +360,7 @@ MAKE_ESCHAR_MSG(5);
 DEFINE_PSTRING(iv_arm_msg, "ARM_R_IV_CATH");
 
 /* DEVICE NAME */
-DEFINE_PSTRING(device_name_string, "IV_arm");
+DEFINE_PSTRING(device_name_string, "esophagus");
 
 /* DEBUG FLOW SENSOR */
 DEFINE_PSTRING(blip_str,"BLIP");
@@ -371,47 +371,6 @@ bool heat_msg_waiting;
 /* FLOW SENSOR VARIABLES */
 FLOW_ACT_MESSAGE_TABLE(AS_ACT_STR);
 
-
-/* PIN BUMP DETECTOR VARIABLES */
-
-typedef enum e_pinstmstate {
-	PS_NO_CONTACT,
-	PS_DURING_CONTACT
-} pin_stm_state;
-pin_stm_state pstm_st = PS_NO_CONTACT;
-TIME_t pin7_start_time_host;
-ms_time_t pin7_start_time;
-//time_t pin7_end_time; /* probably not useful */
-bool pin7_evt_avail;
-TIME_t pin7_evt_start_host;
-ms_time_t pin7_evt_dur;
-void pin7_task(void)
-{
-	bool pin7on = ! (PINE & (1<<PE6));
-	ms_time_t pin7_end_time;
-	switch (pstm_st) {
-		case PS_NO_CONTACT:
-		if (pin7on) {
-			/* TODO maybe ensure these have the same millisecond value */
-			pin7_start_time_host = host_millis();
-			pin7_start_time = millis();
-			pstm_st = PS_DURING_CONTACT;
-		} else {
-			/* no action */
-		}
-		break;
-		case PS_DURING_CONTACT:
-		if (pin7on) {
-			/* no action */
-		} else {
-			pin7_end_time = millis();
-			pstm_st = PS_NO_CONTACT;
-			pin7_evt_start_host = pin7_start_time_host;
-			pin7_evt_dur = pin7_end_time - pin7_start_time;
-			pin7_evt_avail = 1;
-		}
-	}
-}
 /** Main program entry point. This routine contains the overall program flow, including initial
  *  setup of all components and the main program loop.
  */
@@ -421,26 +380,15 @@ int main(void)
 	setup_timer();
 	LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
 	GlobalInterruptEnable();
-	setup_airwaysensor();
-	//Serial_Init(9600, 0);
-	//eschar_init();
-	//pulse_init(); // moved, so that pulse does not start immediately
-	//rfid_init();
+	//setup_airwaysensor();
 
 	for (;;)
 	{
 		HID_Device_USBTask(&Generic_HID_Interface);
 		USB_USBTask();
 		adc_task();
-		airwaysensor_task(adc_values, sensor_varnces, sensor_evt_thresh, &event_buffer);
-		//pin7_task();
-		//lung_module_task();
-		//eschar_task(adc_values);
-		//pulse_task();
-		//rfid_task();
-		//parsed_rfid_ready = try_parse_message();
-		
-		//flowsensor_task(adc_values);
+		//airwaysensor_task(adc_values, sensor_varnces, sensor_evt_thresh, &event_buffer);
+		lung_module_task();
 	}
 }
 
@@ -800,19 +748,6 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 						LEDs_SetAllLEDs(LEDMASK_USB_ERROR);
 						return true;
 					}
-				//pin touch event
-				} else if (pin7_evt_avail) {
-					ms_time_t evt_dur = pin7_evt_dur;
-					ms = pin7_evt_start_host;
-					time_to_wire(ms, Data);
-					uint32_to_wire(evt_dur,Data+8);
-					pin7_evt_avail = 0;
-					*ReportID = WIRE_CONTACT_REPORT_ID;
-					*ReportSize = WIRE_CONTACT_REPORT_SIZE;
-					return true;//pin touch event
-				//send the bio report
-					//} else if (real bio report event) {
-				
 				}
 				#if 1
 				else {
