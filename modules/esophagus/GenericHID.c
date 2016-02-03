@@ -229,7 +229,7 @@ void lung_module_task(void)
 	if (!gas_pressure_learned && (now 
 		>= (gas_pressure_learning_started + GAS_PRESSURE_LEARN_TIME_MS))) {
 		gas_pressure_learned = 1;
-		gas_pressure_threshold	= adc_values[stomach_adc_pin] + 20;
+		gas_pressure_threshold	= adc_values[stomach_adc_pin] + 13;
 	}
 	bool eso_press = gas_pressure_learned ?
 		  adc_values[stomach_adc_pin] >= gas_pressure_threshold
