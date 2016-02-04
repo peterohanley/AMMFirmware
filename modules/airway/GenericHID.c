@@ -262,7 +262,7 @@ void lung_module_task(void)
 				lung_flow_start_time = now;
 				//go to LEFT_PRESSURE_WAITING_STATE
 				lung_st = LEFT_PRESSURE_WAITING_STATE;
-				prevst_msg_waiting = &empty_msg_waiting;
+				prevst_msg_waiting = &hypervent_msg_waiting;
 			} else if (right_press && !left_press) {
 				//set waiting start variable
 				lung_flow_start_time = now;
