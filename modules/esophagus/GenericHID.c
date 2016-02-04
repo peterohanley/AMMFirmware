@@ -191,7 +191,7 @@ unsigned char lung_st;
 unsigned char vent_msg_waiting;
 DEFINE_PSTRING(vent_msg_str,"VENTILATION_ET_TUBE");
 unsigned char bvm_off_msg_waiting;
-DEFINE_PSTRING(bvm_off_msg_str,"BVM_OFF");
+DEFINE_PSTRING(bvm_off_msg_str,"MASK_REMOVE_BVM");
 unsigned char mainstem_msg_waiting;
 DEFINE_PSTRING(mainstem_msg_str, "MAINSTEM_VENTILATION_ET_TUBE");
 unsigned char hypervent_msg_waiting;

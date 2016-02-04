@@ -174,11 +174,11 @@ ms_time_t lung_flow_stop_time;
 bool vent_msg_waiting;
 DEFINE_PSTRING(vent_msg_str,"VENTILATION_ET_TUBE");
 bool bvm_off_msg_waiting;
-DEFINE_PSTRING(bvm_off_msg_str,"BVM_OFF");
+DEFINE_PSTRING(bvm_off_msg_str,"MASK_REMOVE_BVM");
 bool mainstem_msg_waiting;
 DEFINE_PSTRING(mainstem_msg_str, "MAINSTEM_VENTILATION_ET_TUBE");
 bool hypervent_msg_waiting;
-DEFINE_PSTRING(hypervent_msg_str, "MASK_HYPERVENTILATE_PT");
+DEFINE_PSTRING(hypervent_msg_str, "HYPERVENTILATE");
 
 uint16_t gas_pressure_threshold_left = 1023;
 uint16_t gas_pressure_threshold_right = 1023;
@@ -289,7 +289,11 @@ void lung_module_task(void)
 					mainstem_msg_waiting = 1;
 				} else if (right_press && left_press) {
 					//send successful intubation message
-					hypervent_msg_waiting = 1;
+					if (vent_sitch) {
+						vent_msg_waiting = 1;
+					} else {
+						hypervent_msg_waiting = 1;
+					}
 				}
 				//move to pre-BVM_OFF message state
 				lung_st = WAIT_FOR_BVM_OFF_STATE;
@@ -309,7 +313,11 @@ void lung_module_task(void)
 					//we can do this by doing nothing
 				} else if (right_press && left_press) {
 					//send successful intubation message
-					hypervent_msg_waiting = 1;
+					if (vent_sitch) {
+						vent_msg_waiting = 1;
+					} else {
+						hypervent_msg_waiting = 1;
+					}
 					//move to pre-BVM_OFF message state
 					lung_st = WAIT_FOR_BVM_OFF_STATE;
 					lung_flow_stop_time = now;
