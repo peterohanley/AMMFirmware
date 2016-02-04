@@ -191,7 +191,7 @@ unsigned char lung_st;
 unsigned char vent_msg_waiting;
 DEFINE_PSTRING(vent_msg_str,"VENTILATION_ET_TUBE");
 unsigned char bvm_off_msg_waiting;
-DEFINE_PSTRING(bvm_off_msg_str,"MASK_REMOVE_BVM");
+DEFINE_PSTRING(bvm_off_msg_str,"BVM_OFF");
 unsigned char mainstem_msg_waiting;
 DEFINE_PSTRING(mainstem_msg_str, "MAINSTEM_VENTILATION_ET_TUBE");
 unsigned char hypervent_msg_waiting;
@@ -229,7 +229,7 @@ void lung_module_task(void)
 	if (!gas_pressure_learned && (now 
 		>= (gas_pressure_learning_started + GAS_PRESSURE_LEARN_TIME_MS))) {
 		gas_pressure_learned = 1;
-		gas_pressure_threshold	= adc_values[stomach_adc_pin] + 10;
+		gas_pressure_threshold	= adc_values[stomach_adc_pin] + 5;
 	}
 	bool eso_press = gas_pressure_learned ?
 		  adc_values[stomach_adc_pin] >= gas_pressure_threshold
@@ -808,7 +808,7 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 			} else if (Data[1] == 'O' && Data[2] == '2') {
 				//airway emits an O2 message on ACT, echoing it
 				//makes rfid code simpler
-				o2_msg_waiting = 1;
+				//o2_msg_waiting = 1;
 			}
 			flow_sensor_handle_PROX((char*)Data);
 			break;

@@ -174,7 +174,7 @@ ms_time_t lung_flow_stop_time;
 bool vent_msg_waiting;
 DEFINE_PSTRING(vent_msg_str,"VENTILATION_ET_TUBE");
 bool bvm_off_msg_waiting;
-DEFINE_PSTRING(bvm_off_msg_str,"MASK_REMOVE_BVM");
+DEFINE_PSTRING(bvm_off_msg_str,"BVM_OFF");
 bool mainstem_msg_waiting;
 DEFINE_PSTRING(mainstem_msg_str, "MAINSTEM_VENTILATION_ET_TUBE");
 bool hypervent_msg_waiting;
@@ -222,8 +222,8 @@ void lung_module_task(void)
 	if (!gas_pressure_learned && (now 
 		>= (gas_pressure_learning_started + GAS_PRESSURE_LEARN_TIME_MS))) {
 		gas_pressure_learned = 1;
-		gas_pressure_threshold_left = adc_values[left_bronchus_adc_pin] + 3;
-		gas_pressure_threshold_right = adc_values[right_bronchus_adc_pin] + 3;
+		gas_pressure_threshold_left = adc_values[left_bronchus_adc_pin] + 5;
+		gas_pressure_threshold_right = adc_values[right_bronchus_adc_pin] + 5;
 	}
 	bool left_press = gas_pressure_learned ?
 		  adc_values[left_bronchus_adc_pin] >= gas_pressure_threshold_left
