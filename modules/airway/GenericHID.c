@@ -284,6 +284,12 @@ void lung_module_task(void)
 					*prevst_msg_waiting = 1;
 				} else if (left_press && !right_press) {
 					//this is physically impossible
+					//so success!
+					if (vent_sitch) {
+						vent_msg_waiting = 1;
+					} else {
+						hypervent_msg_waiting = 1;
+					}
 				} else if (right_press && !left_press) {
 					//send mainstem intubation message
 					mainstem_msg_waiting = 1;
