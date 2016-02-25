@@ -118,7 +118,7 @@
 
 //* for eschar arm
 #define RV_STM_COUNT 5
-#define RV_STM_ADC_NUMS {6,5,4,1,0}
+#define RV_STM_ADC_NUMS {7,6,5,4,1}
 //*/
 
 //controls whether sensor data is sent back

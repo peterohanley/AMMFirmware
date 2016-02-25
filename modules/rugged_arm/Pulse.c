@@ -1,47 +1,8 @@
-#include "EscharotomyArm.h"
+#include "Pulse.h"
 
 volatile uint8_t pulse_enabled;
-void heat_enable(void)
-{
-	PORTB |= (1<<PB7);
-}
 
-void heat_disable(void)
-{
-	PORTB &= ~(1<<PB7);
-}
-
-void eschar_task(uint16_t* adc_values)
-{
-#define ETASK_EL(x) if ((!eschar_msg_state_##x) && (adc_values[ESCHAR_PIN_##x]<ESCHAR_CUT_THRESH)) {\
-			eschar_msg_state_##x = ESCHAR_MSG_WAITING;\
-		}
-	/*
-	if (!eschar_msg_state_1 && !adc_values[ESCHAR_PIN_1]) {
-			eschar_msg_state_1 = ESCHAR_MSG_WAITING;
-	}
-	*/
-	ETASK_EL(1);
-	ETASK_EL(2);
-	ETASK_EL(3);
-	ETASK_EL(4);
-	ETASK_EL(5);
-	
-	if (eschar_msg_state_1 || eschar_msg_state_2
-		|| eschar_msg_state_3 || eschar_msg_state_4
-		|| eschar_msg_state_5) {
-		heat_enable();
-	}
-	int numcut = (!!eschar_msg_state_1) + (!!eschar_msg_state_2)
-		+ (!!eschar_msg_state_3) + (!!eschar_msg_state_4)
-		+ (!!eschar_msg_state_5);
-	if (numcut >= 4 && !pulse_enabled) {
-		pulse_init();
-	}
-	
-}
-
-void eschar_init(void)
+MODULE_INIT(pulse)
 {
 	//set timer to fast pwm mode
 	//page 131 for COM info 
@@ -59,9 +20,8 @@ void eschar_init(void)
 	//set duty cycle
 	OCR1B = 0x00;
 	
-	//enable output on appropriate pin (B6) and also for the MOSFET (B7)
-	DDRB |= (1<<PB6) | (1<<PB7);
-	//PORTB |= (1<<PB7);
+	//enable output on appropriate pin (B6)
+	DDRB |= (1<<PB6);
 	
 }
 
@@ -78,8 +38,15 @@ const uint8_t pulse[PULSE_NUM_ELTS] =
 #define DEFAULT_PULSE_LEVEL 31
 ms_time_t last_loop_start;
 
+INPUT_REQUESTEE(pulse)
+{
+	//TODO determine if a message should be sent
+	//for pulse the answer is no
+	UNUSED(Data);
+	return 0;
+}
 int pulse_delay_ms = 1000 - PULSE_NUM_ELTS;
-void pulse_init(void)
+void pulse_start(void)
 {
 	last_loop_start = millis();
 	pulse_enabled = 1;
@@ -97,7 +64,7 @@ void pulse_set_delay(int delay)
 		pulse_delay_ms = PULSE_NUM_ELTS; // FIXME 50% seems a good choice
 	}
 }
-void pulse_task(void)
+MODULE_TASK(pulse)
 {
 	if (pulse_enabled) {
 		ms_time_t now = millis();
@@ -109,5 +76,19 @@ void pulse_task(void)
 		OCR1B = val;
 	} else {
 		OCR1B = 0;
+	}
+}
+
+PROX_HANDLER(pulse)
+{
+	//TODO
+	UNUSED(Data);
+}
+
+ACT_HANDLER(pulse)
+{
+	//TODO
+	if (Data[1]=='S' && Data[2]=='T' && Data[3]=='O' && Data[4]=='P') { // skip length, check first character
+		pulse_stop();
 	}
 }

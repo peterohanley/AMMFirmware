@@ -20,11 +20,11 @@ MAKE_ESCHAR_MSG(5);
 */
 
 /* these are adc pin numbrs, in adc_values */
-#define ESCHAR_PIN_1 6
-#define ESCHAR_PIN_2 5
-#define ESCHAR_PIN_3 4
-#define ESCHAR_PIN_4 1
-#define ESCHAR_PIN_5 0
+#define ESCHAR_PIN_1 1
+#define ESCHAR_PIN_2 4
+#define ESCHAR_PIN_3 5
+#define ESCHAR_PIN_4 6
+#define ESCHAR_PIN_5 7
 
 /* when 4 is cut resume the pulse */
 /* these pins form an L shape with the long arm under the skin 

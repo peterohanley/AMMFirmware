@@ -3,12 +3,12 @@
 volatile uint8_t pulse_enabled;
 void heat_enable(void)
 {
-	PORTB |= (1<<PB7);
+	PORTC |= (1<<PC6);
 }
 
 void heat_disable(void)
 {
-	PORTB &= ~(1<<PB7);
+	PORTC &= ~(1<<PC6);
 }
 
 void eschar_task(uint16_t* adc_values)
@@ -59,8 +59,8 @@ void eschar_init(void)
 	//set duty cycle
 	OCR1B = 0x00;
 	
-	//enable output on appropriate pin (B6) and also for the MOSFET (B7)
-	DDRB |= (1<<PB6) | (1<<PB7);
+	//enable output on appropriate pin (B6) and also for the MOSFET (C6)
+	DDRB |= (1<<PB6) | (1<<PC6);
 	//PORTB |= (1<<PB7);
 	
 }

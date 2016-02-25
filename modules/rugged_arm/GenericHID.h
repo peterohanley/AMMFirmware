@@ -48,9 +48,11 @@
 		#include "Config/AppConfig.h"
 		#include "AirwaySensors.h"
 		#include "Timer.h"
-		#include "RFID.h"
-		#include "EscharotomyArm.h"
-		#include "FlowSensor.h"
+
+		#include "../../WireConversions.h"
+
+/* modules. TODO find a way to generate the includes automatically */
+		#include "Pulse.h"
 
 		#include <LUFA/Common/Common.h>
 		#include <LUFA/Drivers/Board/LEDs.h>

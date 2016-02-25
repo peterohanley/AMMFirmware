@@ -116,11 +116,6 @@
 
 #define RV_IS_IV_ARM 0
 
-/* for eschar arm
-#define RV_STM_COUNT 5
-#define RV_STM_ADC_NUMS {6,5,4,1,0}
-//*/
-
 #define RV_STM_COUNT 0
 #define RV_STM_ADC_NUMS {}
 
@@ -137,6 +132,9 @@
 		
 	#define DEFINE_PSTRING(var,str) const struct {unsigned char len; char content[sizeof(str)];} PROGMEM (var) = {sizeof(str)-1, (str)}
 		
+#define MODULE_TABLE(_) _(timer) _(pulse)
+
+#include "../../ModuleSystem.h"
 
 	#define UNUSED(x) (void)x;
 
