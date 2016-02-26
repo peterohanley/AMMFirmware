@@ -1,10 +1,31 @@
 #include "Timer.h"
+#include "Config/AppConfig.h"
 
 /* will rollover once every ~50 days */
 volatile ms_time_t cur_millis = 0;
 TIME_t time_oset = 0;
 
-void setup_timer(void)
+MODULE_TASK(timer)
+{
+	return;
+}
+PROX_HANDLER(timer)
+{
+	UNUSED(Data);
+	return;
+}
+ACT_HANDLER(timer)
+{
+	UNUSED(Data);
+	return;
+}
+INPUT_REQUESTEE(timer)
+{
+	UNUSED(Data);
+	return 0;
+}
+
+MODULE_INIT(timer)
 {
 	/*
 		for one millisecond clock hits, we want K = F_CPU / (pres * 1000) - 1 to

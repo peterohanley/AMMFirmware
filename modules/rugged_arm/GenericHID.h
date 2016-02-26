@@ -46,8 +46,8 @@
 		
 		#include "Descriptors.h"
 		#include "Config/AppConfig.h"
-		#include "AirwaySensors.h"
-		#include "Timer.h"
+		#include "../../AirwaySensors.h"
+		#include "../../Timer.h"
 
 		#include "../../WireConversions.h"
 

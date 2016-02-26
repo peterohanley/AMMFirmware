@@ -6,7 +6,7 @@
 #include <stdbool.h>
 
 #include "Config/AppConfig.h"
-#include "Timer.h"
+#include "../../Timer.h"
 
 MODULE_TASK(pulse);
 MODULE_INIT(pulse);

@@ -4,13 +4,21 @@
 	#include <avr/interrupt.h>
 	//#include <stdlib.h>
 	//#include <sys/time.h>
+	#include "../../ModuleSystem.h"
+	#include <stdbool.h>
 
 	typedef uint32_t ms_time_t;
 	typedef uint64_t TIME_t;
-	//FIXME
+
 	ms_time_t millis(void);
 	TIME_t host_millis(void);
-	void setup_timer(void);
+	
+	MODULE_TASK(timer);
+	MODULE_INIT(timer);
+	PROX_HANDLER(timer);
+	ACT_HANDLER(timer);
+	INPUT_REQUESTEE(timer);
+	//void setup_timer(void);
 	void set_time_oset(TIME_t);
 	
 	void time_to_wire(TIME_t t, uint8_t w[]);
