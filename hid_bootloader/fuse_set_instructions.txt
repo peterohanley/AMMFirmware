@@ -14,3 +14,6 @@ avrdude -p atmega32u4 -P usb -c avrispmkii -U lfuse:w:0x5e:m -U hfuse:w:0x98:m -
 #this disables BOOTRST
 avrdude -p atmega32u4 -P usb -c avrispmkii -U lfuse:w:0x5e:m -U hfuse:w:0x99:m -U efuse:w:0xf3:m
 
+
+#from .bash_history, this is the one I was using
+avrdude -p atmega32u4 -P usb -c avrispmkii -U flash:w:boot_and_app.bin -U lfuse:w:0x5e:m -U hfuse:w:0xd9:m -U efuse:w:0xcb:m
