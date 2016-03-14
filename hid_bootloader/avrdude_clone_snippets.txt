@@ -1,0 +1,16 @@
+avrdude -p atmega32u4 -P usb -c avrispmkii -U flash:r:ard_leo_orig.bin:r -U lfuse:r:ard_leo_orig_low.bin:r -U hfuse:r:ard_leo_orig_high.bin:r -U efuse:r:ard_leo_orig_ext.bin:r
+
+avrdude -p atmega32u4 -P usb -c avrispmkii -U flash:w:demo_dump.bin:m -U lfuse:w:demo_dump_low.bin:m -U hfuse:w:demo_dump_high.bin:m -U efuse:w:demo_dump_ext.bin:m
+
+avrdude -p atmega32u4 -P usb -c avrispmkii -U flash:w:demo_dump.bin -U lfuse:w:demo_dump_low.bin:r -U hfuse:w:demo_dump_high.bin:r -U efuse:w:demo_dump_ext.bin:r
+
+avrdude -p atmega32u4 -P usb -c avrispmkii -U flash:w:boot_and_app.bin -U lfuse:w:0x5e:m -U hfuse:w:0xd9:m -U efuse:w:0xcb:m
+
+#THIS ONE MAKES FILES OF THE BOARD'S INFO
+avrdude -p atmega32u4 -P usb -c avrispmkii -U flash:r:signals_real_loaded.bin:r -U lfuse:r:signals_real_loaded_low.bin:r -U hfuse:r:signals_real_loaded_high.bin:r -U efuse:r:signals_real_loaded_ext.bin:r
+
+#THIS ONE OVERWRITES THE BOARD'S INFO
+avrdude -p atmega32u4 -P usb -c avrispmkii -U flash:w:ard_leo_orig.bin:r -U lfuse:w:ard_leo_orig_low.bin:r -U hfuse:w:ard_leo_orig_high.bin:r -U efuse:w:ard_leo_orig_ext.bin:r
+
+avrdude -p atmega32u4 -P usb -c avrispmkii -U flash:w:signals_real_loaded.bin:r -U lfuse:w:signals_real_loaded_low.bin:r -U hfuse:w:signals_real_loaded_high.bin:r -U efuse:w:signals_real_loaded_ext.bin:r
+

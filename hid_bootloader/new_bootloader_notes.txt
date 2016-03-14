@@ -1,0 +1,46 @@
+new HID report "reboot now" use 255
+	send the essage
+	application disables USB
+	application jumps to start address of boot section
+	bootloader bootloads, restarts in the same way
+	this will work because bootloader cannot boot reboot into bootloader voluntarily 
+
+application sets value, rests
+code in init section jumps to bootloader
+bootloader overwrites application code, watchdog resets
+execution continues in new application code
+
+bootstrapping a new device:
+write the annoying BOOTRST bootloader to the device
+use that bootloader to load an application
+
+stage
+	empty
+
+stage
+	enable BOOTRST
+	load new bootloader
+
+stage
+	load new application through new bootloader
+
+stage
+	disable BOOTRST
+
+then create image so that this only needs to be done once
+
+#to create an image
+avrdude -p atmega32u4 -P usb -c avrispmkii -U flash:r:boot_and_app.bin:r
+
+#to write an image
+avrdude -p atmega32u4 -P usb -c avrispmkii -U flash:w:boot_and_app.bin -U lfuse:w:0x5e:m -U hfuse:w:0x99:m -U efuse:w:0xcb:m
+
+how to check that a prospective program image is safe for uploading
+use avrdude to dump flash
+bootload new image
+bootload old image over new image
+check byte-for-byte compatibility with originally written image
+this requires .hex versions of old and new code, as well as knowledge that the
+	old code is on the device
+
+

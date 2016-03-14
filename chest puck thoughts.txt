@@ -1,0 +1,13 @@
+chest intubation STM
+inputs: pressure, direction, "spikiness" of pressure (variacne above threshold)
+
+desired thing to detect: a spiky drop
+	pressure down
+	spikiness > some threshold
+
+each second: check for pressure lower than f(avg. pressure over prev. second) as the pressure drop condition
+	candidates for f(x) : \x -> x - 5
+
+action: send some message
+
+also use a pressure sensor to get atmospheric pressure

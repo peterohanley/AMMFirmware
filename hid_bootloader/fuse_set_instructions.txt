@@ -1,0 +1,16 @@
+use http://www.engbedded.com/fusecalc to see what a fuse setting means
+
+-U lfuse:w:0xff:m -U hfuse:w:0xd9:m -U efuse:w:0xf1:m
+
+avrdude -p atmega32u4 -P usb -U lfuse:w:0xff:m -U hfuse:w:0xd9:m -U efuse:w:0xf3:m -c avrispmkii
+
+avrdude -p atmega32u4 -P usb -U lfuse:w:0xff:m -U hfuse:w:0xd9:m -U efuse:w:0xf1:m -c avrispmkii
+
+# this one enables BOOTRST, not sure if it was supposed to be on or off
+# (instructions say "cleared")
+# it should be off for the new one, so not this setting
+avrdude -p atmega32u4 -P usb -c avrispmkii -U lfuse:w:0x5e:m -U hfuse:w:0x98:m -U efuse:w:0xf3:m
+
+#this disables BOOTRST
+avrdude -p atmega32u4 -P usb -c avrispmkii -U lfuse:w:0x5e:m -U hfuse:w:0x99:m -U efuse:w:0xf3:m
+
