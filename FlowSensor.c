@@ -23,7 +23,7 @@ void flow_enum_set_waiting(flow_messages k) {
 }
 
 
-void flowsensor_task(uint16_t* adc_values)
+void MODULE_TASK(flowsensor_task) //(uint16_t* adc_values) TODO
 {
 	ms_time_t now = millis();
 	
@@ -65,8 +65,9 @@ int ram_prog_cmp(char* ram, char* prog, int n)
 	return 0;
 }
 
-void flow_sensor_handle_PROX(char* data)
+void PROX_HANDLER(flow_sensor)
 {
+	uint8_t* data = Data; //FIXME
 #define AS_ACT_CMP_CASE(s) if (!ram_prog_cmp(data,(char*)&pstr_rcv_##s,MIN(data[0],pstr_rcv_##s .len))) {last_flowmsg_rcvd = el_##s;return;} 
 	
 	FLOW_ACT_MESSAGE_TABLE(AS_ACT_CMP_CASE);
@@ -76,8 +77,9 @@ void flow_sensor_handle_PROX(char* data)
 
 //TODO this is defined somewhere else too, only define 
 DEFINE_PSTRING(iv_connected_str, "ARM_R_IV_CATH");
-void flow_sensor_handle_ACT(char* data)
+void ACT_HANDLER(flow_sensor)
 {
+	uint8_t* data = Data; // FIXME
 	//if ARM_R_IV_CATH is received, begin acknowledging IVs
 	if (!ram_prog_cmp(data,(char*)&iv_connected_str,iv_connected_str.len)) {
 		iv_connected = 1;

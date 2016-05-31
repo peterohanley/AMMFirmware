@@ -35,7 +35,6 @@
  */
 
 #include "GenericHID.h"
-#include "../../ModuleSystem.h"
 
 /** Buffer to hold the previously generated HID report, for comparison purposes inside the HID class driver. */
 static uint8_t PrevHIDReportBuffer[BIO_EVENT_REPORT_SIZE]; 
@@ -147,7 +146,7 @@ uint16_t adc_read(int pin) {
 
 void adc_task(void) {
 	int i;
-	for (i = 0; i < 9; i++) {
+	for (i = 0; i < 12; i++) {
 		adc_values[i] = adc_read(i);
 	}
 }
@@ -158,14 +157,17 @@ DEFINE_PSTRING(bio_report_string,BIO_REPORT_TABLE(BIO_AS_REPORT_STRING));
 #define VALUE_TO_STRING(x) #x
 #define VALUE(x) VALUE_TO_STRING(x)
 
+/* RFID CODE VARIABLES */
+bool parsed_rfid_ready;
 
-
-
+/* FLOW RATE VARIABLES */
+//TODO
 
 
 /* code for echoing PROX to ACT */
 unsigned char prox2act[MIN(PROX_REPORT_SIZE,BIO_EVENT_REPORT_SIZE)];
-
+//#define ECHO_PROX_TO_ACT
+bool prox2act_msg_waiting;
 /* ACT macro*/
 #define SEND_ACT(pstr) do {int len;\
 						const char* str;\
@@ -188,11 +190,29 @@ unsigned char prox2act[MIN(PROX_REPORT_SIZE,BIO_EVENT_REPORT_SIZE)];
 						}\
 						*ReportID = PROX_REPORT_ID;\
 						*ReportSize = PROX_REPORT_SIZE; } while (0)
+/* ESCHAROTOMY ARM VARIABLES. Here because they must be initialized, as they are
+ in PROGMEM, but they can't be declared twice */
+MAKE_ESCHAR_MSG(1);
+MAKE_ESCHAR_MSG(2);
+MAKE_ESCHAR_MSG(3);
+MAKE_ESCHAR_MSG(4);
+MAKE_ESCHAR_MSG(5);
 
+/* IV ARM VARIABLES */
+
+DEFINE_PSTRING(iv_arm_msg, "ARM_R_IV_CATH");
 
 /* DEVICE NAME */
-DEFINE_PSTRING(device_name_string, "rugged_arm");
+DEFINE_PSTRING(device_name_string, "IV_arm");
 
+/* DEBUG FLOW SENSOR */
+DEFINE_PSTRING(blip_str,"BLIP");
+
+/* DEBUG ESCHAR ARM */
+DEFINE_PSTRING(heat_str,"HEAT");
+bool heat_msg_waiting;
+/* FLOW SENSOR VARIABLES */
+FLOW_ACT_MESSAGE_TABLE(AS_ACT_STR);
 
 /** Main program entry point. This routine contains the overall program flow, including initial
  *  setup of all components and the main program loop.
@@ -203,15 +223,19 @@ int main(void)
 	//setup_timer();
 	LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
 	GlobalInterruptEnable();
-	//eschar_init();
+	setup_airwaysensor();
+	//Serial_Init(9600, 0);
+	eschar_init();
 	//pulse_init(); // moved, so that pulse does not start immediately
-	MODULE_TABLE(AS_MODULE_INITS);
-
+	//rfid_init();
+	
+	DDRC |= (1<<PC6); /* enable C7 as out */
 	for (;;)
 	{
+		PORTC |= (1<<PC6);
 		HID_Device_USBTask(&Generic_HID_Interface);
 		USB_USBTask();
-		//adc_task();
+		adc_task();
 		//airwaysensor_task(adc_values, sensor_varnces, sensor_evt_thresh, &event_buffer);
 		//pin7_task();
 		//lung_module_task();
@@ -221,7 +245,7 @@ int main(void)
 		//parsed_rfid_ready = try_parse_message();
 		
 		//flowsensor_task(adc_values);
-		MODULE_TABLE(AS_MODULE_TASKS);
+		PORTC &= ~(1<<PC6);
 	}
 }
 
@@ -359,13 +383,45 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 	//uint16_t strlen_rem;
 	TIME_t ms;
 	UNUSED(HIDInterfaceInfo);
+	//const event_t* nextevt;
 	switch (ReportType) {
 		case HID_REPORT_ITEM_Feature:
+			/*if (stm_state == STRINGSTM_STRING_REQUESTED 
+				&& *ReportID == STRING_DESC_HACK_REPORT_ID) { 
+				cb_wValue = (DTYPE_String << 8) | stm_reqd_stringid;
+				// use the descriptor callback to get the string ptr and length, then index with the offset
+				cb_strlen = CALLBACK_USB_GetDescriptor(cb_wValue, 0, cb_descriptoraddr);
+				//put bytes of string into buffer
+				if (stm_reqd_offset < cb_strlen) {
+					Data[0] = cb_strlen >> 8;
+					Data[1] = cb_strlen & 0xff;
+					strlen_rem = cb_strlen - stm_reqd_offset;
+					Data[2] = strlen_rem >> 8;
+					Data[3] = strlen_rem & 0xff;
+					Data+=4;
+					strchars = (uint8_t*) str_addr->UnicodeString;
+					strchars += stm_reqd_offset;
+					for (int i = 0; i <30; i++) {
+						Data[i]=pgm_read_byte(strchars + i);
+					}
+					Data -= 4;
+				}
+				
+				*ReportSize = STRING_DESC_REPORT_HACK_SIZE;
+				stm_state = STRINGSTM_STATE_BASE;
+				return true;
+			} else */
 			if (*ReportID == TIMESTAMP_OFFSET_FR_ID) {
 				//return the current timestamp
 				ms = host_millis();
 				time_to_wire(ms, Data);
 				*ReportSize = TIMESTAMP_FR_SIZE;
+				return true;
+			} else if (*ReportID == SET_SENS_THRESH_REPORT_ID) {
+				for (int i = 0; i < 4; i++) {
+					float_to_wire(sensor_evt_thresh[i], Data + 4*i);
+				}
+				*ReportSize = SET_SENS_THRESH_REPORT_SIZE;
 				return true;
 			} else if (*ReportID == REPORT_MAP_STRING_ID) {
 				int len = bio_report_string.len;
@@ -385,32 +441,30 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 				}
 				*ReportSize = DEVICE_NAME_REPORT_SIZE;
 				return true;
-			} else { /* make some other kind of feature report */
+			} /* else if (*ReportID == NO_DATA_REPORT_ID) {
+				Data[0] = lung_st;
+				*ReportSize = NO_DATA_REPORT_SIZE;
+				return true;
+			} */ else { /* make some other kind of feature report */
 				return false;
 			}
-		
 			break;
 		case HID_REPORT_ITEM_In:
-		//FIXME use another switch here rather than elif cascade
-		/*
-		Here we must decide what to send back. If there is a waiting event 
-		(pin7, ADC) send that.
-		
-		Otherwise send the next bio report.
-		
-		However, every report id must also have a clause for if it is specicifically requested. 
-		*/
 		//TODO use a table of functions that might set the report, call each in turn
 		//this will allow better operation with multiple reports, and allow each module's variables to be encapsulated in their files
 			
-			if (*ReportID == 0) {
-				//rugged arm doesn't send anything
-				//TODO call function, if it has response send it, else call next module
-#define AS_INPUT_REQUESTEE(x) if (x##_input_requestee(Data)) {return true;}
-				
-				//if (pulse_input_requestee(Data)) {return true};
-				MODULE_TABLE(AS_INPUT_REQUESTEE);
-				
+			if ((*ReportID == 0)) { //show adc output
+				int desired[] = RV_STM_ADC_NUMS;
+				for (int adcix = 0; adcix < RV_STM_COUNT; adcix++) {
+					Data[2*adcix + 1] = (adc_values[desired[adcix]] >> 8);
+					Data[2*adcix] = adc_values[desired[adcix]] & 0xff;
+				}
+				for (int i = 0; i < RV_STM_COUNT; i ++) {
+					float_to_wire(sensor_varnces[i],Data+(2*RV_STM_COUNT)+4*i);
+				}
+				*ReportID = 3;
+				*ReportSize = (RV_STM_COUNT*(4+2));
+				return true;
 			}
 	}
 	return false;
@@ -446,12 +500,19 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 				TIME_t oset;
 				oset = time_from_wire(Data);
 				set_time_oset(oset);
+			} else if (ReportID == SET_SENS_THRESH_REPORT_ID) {
+				for (int i=0; i < 4; i++) {
+					sensor_evt_thresh[i] = float_from_wire(Data + 4*i);
+				}
 			} else if (ReportID == START_BOOTLOADER_REPORT_ID) {
 				//check that proper code was supplied
 				//FIXME lol always succeed
 				//start bootloader
 				LEDs_SetAllLEDs(LEDS_LED1|LEDS_LED2|LEDS_LED3);
 				Jump_To_Bootloader();
+			} else if (ReportID == NO_DATA_REPORT_ID) {
+				heat_enable();
+				heat_msg_waiting = 1;
 			}
 			break;
 		case HID_REPORT_ITEM_Out:
@@ -459,11 +520,26 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 		
 		switch (ReportID) {
 			
+			case RFID_TAG_SCAN_COMMAND_REPORT_ID:
+			//rfid_parser_clearbuffers();
+			if (Data[0] == 0) {
+				rfid_sendcommand_readtags();
+			}
+			//TODO do whatever else needs to be set up
+			break;
 			
 			case PROX_REPORT_ID:;
 			//TODO check message, take appropriate action
-			//rugged doesn't care
-			MODULE_TABLE(AS_PROX_HANDLER);
+			/* 
+			Airway module must
+				consume
+					BVM
+					VENT
+			Stomach module must also consume BVM.
+			*/
+
+			
+			flow_sensor_handle_PROX((char*)Data);
 			break;
 			
 			case BIO_EVENT_REPORT_ID:; /* ACT */
@@ -475,8 +551,10 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 				Rugged arm
 				or rather, all the arms that have a pulse.
 			*/
-			
-			MODULE_TABLE(AS_ACT_HANDLER);
+			if (Data[1]=='S' && Data[2]=='T' && Data[3]=='O' && Data[4]=='P') { // skip length, check first character
+				pulse_stop();
+			}
+			flow_sensor_handle_ACT((char*) Data);
 			break;
 			
 			case HEART_RATE_REPORT_ID:;
@@ -487,7 +565,6 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 				Escharotomy Arm
 				IV Arm
 			*/
-			//TODO move this to pulse.c, make it generic across modules
 			int pulse_delay_ms;
 			float hr;
 			//read float from message

@@ -58,6 +58,7 @@
 
 	#define REPORT_MAP_STRING_ID 1
 #define REPORT_MAP_STRING_SIZE 0xfe
+//#define REPORT_MAP_STRING_SIZE 64
 	#define STRING_DESC_HACK_REPORT_ID 2
 
 	#define TIMESTAMP_OFFSET_FR_ID 4
@@ -90,12 +91,15 @@
 
 	#define BIO_EVENT_REPORT_ID 18
 #define BIO_EVENT_REPORT_SIZE 255
+//#define BIO_EVENT_REPORT_SIZE 64
 
 	#define PROX_REPORT_ID 19
 #define PROX_REPORT_SIZE 255
+//#define PROX_REPORT_SIZE 64
 
 	#define DEVICE_NAME_REPORT_ID 2
 #define DEVICE_NAME_REPORT_SIZE 255
+//#define DEVICE_NAME_REPORT_SIZE 64
 
 //above is the required definitions. Now the device selection
 
@@ -107,19 +111,37 @@
 */
 
 
-#define RV_IS_IV_ARM 0
+//#define RV_STM_COUNT 4
+//#define RV_STM_ADC_NUMS {1,4,6,7}
 
+#define RV_IS_IV_ARM 1
 
-//* for stomach
-#define RV_STM_COUNT 1
-#define RV_STM_ADC_NUMS {7}
+//* for eschar arm
+#define RV_STM_COUNT 2
+#define RV_STM_ADC_NUMS {1,0}
 //*/
 
-//controls whether sensor data is sent back
-#define SEND_ADC_DATA 0
+//#define RV_STM_COUNT 6
+//#define RV_STM_ADC_NUMS {0,1,4,5,6,7}
 
+//controls whether sensor data is sent back
+#define SEND_ADC_DATA 1
+/*
+#define BIO_REPORT_TABLE(_) _(RESPIRATORY_RATE,8,"f")\
+	_(TIDAL_VOLUME, 9,"f")\
+	_(LUNG_VOLUME_TOTAL, 10,"f")\
+	_(LUNG_VOLUME_L, 11,"f")\
+	_(LUNG_VOLUME_R, 12,"f")\
+	_(HEART_RATE, 13,"f")\
+	_(ART, 14,"f")\
+	_(ACT,18,"s")\
+	_(PROX,19,"s")
+
+#define BIO_AS_REPORT_STRING(name, num, suffix) #name "=" #num suffix ","
+//*/
 //*
 #define BIO_REPORT_TABLE(_) \
+	_(HEART_RATE, 13,"f")\
 	_(ACT,18,"s")\
 	_(PROX,19,"s")
 
@@ -131,6 +153,4 @@
 
 	#define UNUSED(x) (void)x;
 
-	#include "../../ModuleSystem.h"
-	#define MODULE_TABLE(_) _(timer)
 #endif
