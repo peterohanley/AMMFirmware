@@ -48,9 +48,6 @@
 		#include "Config/AppConfig.h"
 		#include "AirwaySensors.h"
 		#include "../../Timer.h"
-		#include "RFID.h"
-		#include "EscharotomyArm.h"
-		#include "FlowSensor.h"
 
 		#include <LUFA/Common/Common.h>
 		#include <LUFA/Drivers/Board/LEDs.h>

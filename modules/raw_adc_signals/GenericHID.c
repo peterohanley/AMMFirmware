@@ -190,29 +190,14 @@ bool prox2act_msg_waiting;
 						}\
 						*ReportID = PROX_REPORT_ID;\
 						*ReportSize = PROX_REPORT_SIZE; } while (0)
-/* ESCHAROTOMY ARM VARIABLES. Here because they must be initialized, as they are
- in PROGMEM, but they can't be declared twice */
-MAKE_ESCHAR_MSG(1);
-MAKE_ESCHAR_MSG(2);
-MAKE_ESCHAR_MSG(3);
-MAKE_ESCHAR_MSG(4);
-MAKE_ESCHAR_MSG(5);
 
 /* IV ARM VARIABLES */
 
 DEFINE_PSTRING(iv_arm_msg, "ARM_R_IV_CATH");
 
 /* DEVICE NAME */
-DEFINE_PSTRING(device_name_string, "IV_arm");
+DEFINE_PSTRING(device_name_string, "raw_adc_signals");
 
-/* DEBUG FLOW SENSOR */
-DEFINE_PSTRING(blip_str,"BLIP");
-
-/* DEBUG ESCHAR ARM */
-DEFINE_PSTRING(heat_str,"HEAT");
-bool heat_msg_waiting;
-/* FLOW SENSOR VARIABLES */
-FLOW_ACT_MESSAGE_TABLE(AS_ACT_STR);
 
 /** Main program entry point. This routine contains the overall program flow, including initial
  *  setup of all components and the main program loop.
@@ -224,10 +209,6 @@ int main(void)
 	LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
 	GlobalInterruptEnable();
 	setup_airwaysensor();
-	//Serial_Init(9600, 0);
-	eschar_init();
-	//pulse_init(); // moved, so that pulse does not start immediately
-	//rfid_init();
 	
 	DDRC |= (1<<PC6); /* enable C7 as out */
 	for (;;)
@@ -237,14 +218,7 @@ int main(void)
 		USB_USBTask();
 		adc_task();
 		//airwaysensor_task(adc_values, sensor_varnces, sensor_evt_thresh, &event_buffer);
-		//pin7_task();
-		//lung_module_task();
-		//eschar_task(adc_values);
-		//pulse_task();
-		//rfid_task();
-		//parsed_rfid_ready = try_parse_message();
 		
-		//flowsensor_task(adc_values);
 		PORTC &= ~(1<<PC6);
 	}
 }
@@ -510,9 +484,6 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 				//start bootloader
 				LEDs_SetAllLEDs(LEDS_LED1|LEDS_LED2|LEDS_LED3);
 				Jump_To_Bootloader();
-			} else if (ReportID == NO_DATA_REPORT_ID) {
-				heat_enable();
-				heat_msg_waiting = 1;
 			}
 			break;
 		case HID_REPORT_ITEM_Out:
@@ -520,13 +491,6 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 		
 		switch (ReportID) {
 			
-			case RFID_TAG_SCAN_COMMAND_REPORT_ID:
-			//rfid_parser_clearbuffers();
-			if (Data[0] == 0) {
-				rfid_sendcommand_readtags();
-			}
-			//TODO do whatever else needs to be set up
-			break;
 			
 			case PROX_REPORT_ID:;
 			//TODO check message, take appropriate action
@@ -539,46 +503,12 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 			*/
 
 			
-			flow_sensor_handle_PROX((char*)Data);
 			break;
 			
 			case BIO_EVENT_REPORT_ID:; /* ACT */
-			//TODO check message, take appropriate action
-			/*especially be sure to handle STOP message
-				STOP message must be received by:
-				Escharotomy arm
-				IV arm
-				Rugged arm
-				or rather, all the arms that have a pulse.
-			*/
-			if (Data[1]=='S' && Data[2]=='T' && Data[3]=='O' && Data[4]=='P') { // skip length, check first character
-				pulse_stop();
-			}
-			flow_sensor_handle_ACT((char*) Data);
-			break;
-			
-			case HEART_RATE_REPORT_ID:;
-			//adjust rate of the pulse generator
-			//do this by changing the dead time on each pulse
-			/* needed by:
-				Rugged Arm
-				Escharotomy Arm
-				IV Arm
-			*/
-			int pulse_delay_ms;
-			float hr;
-			//read float from message
-			hr = float_from_wire(Data); // b/m
-			float bps = hr / 60.0; /* b/m * m/s = b/s */
-			float spb = 1.0/bps;
-			float ms_p_b = 1000*spb;
-			pulse_delay_ms = ms_p_b;
-			//convert bpm as float to ms of delay as int
-			//do whatever end up with ms of delay per beat as int
-			//send to pulse unit
-			pulse_set_delay(pulse_delay_ms);
 			
 			break;
+			
 		}
 	}
 }
