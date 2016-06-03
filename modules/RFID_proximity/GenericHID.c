@@ -102,15 +102,6 @@ float sensor_evt_thresh[4] = {
 #undef DEFAULT_SENSOR_THRESH
 float sensor_varnces[4];
 
-#define EVENT_T_INIT {0,0,0}
-event_buf_t event_buffer = {10,0,0,0,
-	{EVENT_T_INIT
-	,EVENT_T_INIT,EVENT_T_INIT,EVENT_T_INIT
-	,EVENT_T_INIT,EVENT_T_INIT,EVENT_T_INIT
-	,EVENT_T_INIT,EVENT_T_INIT,EVENT_T_INIT
-	}
-};
-#undef EVENT_T_INIT
 
 
 /* hold the state for the string descriptor hack */
@@ -160,171 +151,8 @@ DEFINE_PSTRING(bio_report_string,BIO_REPORT_TABLE(BIO_AS_REPORT_STRING));
 /* RFID CODE VARIABLES */
 bool parsed_rfid_ready;
 
-/* FLOW RATE VARIABLES */
-//TODO
-
-/* GAS THRESHOLD DETECTOR VARIABLES */
-//TODO these will be 2 seperate modules, so make them function correctly
-
-#define EVT_DOWN 1
-#define EVT_UP 2
-//stomach
-DEFINE_PSTRING(esophageal_msg_str, "ESOPHAGEAL_VENTILATION_ET_TUBE");
-ms_time_t stomach_last_sent_event;
-#define stomach_adc_pin 7
-uint8_t esophageal_msg_waiting;
-uint8_t eso_st;
-ms_time_t eso_flow_stop_time;
-bool stomach_evt_occuring;
 
 
-
-
-
-#define right_bronchus_adc_pin 5
-bool right_bronchus_evt_occuring;
-
-#define left_bronchus_adc_pin 7
-bool left_bronchus_evt_occuring;
-ms_time_t lung_flow_stop_time;
-unsigned char lung_st;
-unsigned char vent_msg_waiting;
-DEFINE_PSTRING(vent_msg_str,"VENTILATION_ET_TUBE");
-unsigned char bvm_off_msg_waiting;
-DEFINE_PSTRING(bvm_off_msg_str,"BVM_OFF");
-unsigned char mainstem_msg_waiting;
-DEFINE_PSTRING(mainstem_msg_str, "MAINSTEM_VENTILATION_ET_TUBE");
-unsigned char hypervent_msg_waiting;
-DEFINE_PSTRING(hypervent_msg_str, "MASK_HYPERVENTILATE_PT");
-bool mask_main_exclusion;
-
-uint16_t gas_pressure_threshold = 505;
-#define GAS_EVENT_WAIT_TIME 1000
-#define WAIT_FOR_BOTH_PRESSURES_MS 3000
-#define BVM_OFF_WAIT_TIME_MS 3000
-
-#define ACT_MSG_ST_RCVD 1
-uint8_t bvm_sitch, vent_sitch;
-
-#define ESOPHAGEAL_ST_1 1
-uint8_t esophageal_st;
-
-//workaround
-uint8_t o2_msg_waiting;
-DEFINE_PSTRING(o2_msg_str,"O2");
-
-
-#define GAS_IS_LUNGS
-void lung_module_task(void)
-{
-	//FIXME see if these if branches can be neater
-#ifdef GAS_IS_LUNGS
-	/*
-	bool leftpress = adc_values[left_bronchus_adc_pin] >= gas_pressure_threshold;
-	bool rightpress = adc_values[right_bronchus_adc_pin] >= gas_pressure_threshold;
-	if (!right_bronchus_evt_occuring) {
-		if (rightpress) {
-			right_bronchus_evt_occuring = 1;
-			if (leftpress) {
-				//send success message
-				bronchus_success_evt_waiting = 1;
-				left_bronchus_evt_occuring = 1;
-			} else {
-				//send failure message
-				left_bronchus_evt_occuring = 0;
-				bronchus_mainstem_evt_waiting = 1;
-			}
-		}
-	} else if (adc_values[right_bronchus_adc_pin] < gas_pressure_threshold) {
-		right_bronchus_evt_occuring = 0;
-	}
-	*/
-	bool left_press = adc_values[left_bronchus_adc_pin] >= gas_pressure_threshold;
-	bool right_press = adc_values[right_bronchus_adc_pin] >= gas_pressure_threshold;
-	bool anymsg = bvm_sitch || vent_sitch;
-	if (!anymsg) {
-		lung_st = 0;
-	} else if (!right_press && !left_press) {
-		if (lung_st == 0) {
-			lung_st = 1;
-			//no message
-		} else if (lung_st == 3 || lung_st == 4 || lung_st == 5) {
-			lung_flow_stop_time = millis();
-			lung_st = 2;
-		} else if (lung_st == 2) {
-			ms_time_t now = millis();
-			if (now - lung_flow_stop_time > BVM_OFF_WAIT_TIME_MS) {
-				bvm_off_msg_waiting = 1;
-				//re-enable mask/mainstem
-				mask_main_exclusion = 0;
-				bvm_sitch = 0;
-				lung_st = 1;
-			}
-		}
-	} else if (right_press && !left_press && bvm_sitch) {
-		if ((lung_st == 0 || lung_st == 1 || lung_st == 3) && !mask_main_exclusion) {
-			lung_st = 4;
-			mainstem_msg_waiting = 1;
-			mask_main_exclusion = 1;
-		}
-	} else if (right_press && left_press) {
-		if (vent_sitch) {
-			vent_msg_waiting = 1;
-			lung_st = 5;
-		} else if (bvm_sitch) {
-			if ((lung_st == 0 || lung_st == 1 || lung_st == 4) && !mask_main_exclusion) {
-				hypervent_msg_waiting = 1;
-				mask_main_exclusion = 1;
-				lung_st = 3;
-			}
-		}
-	}
-	
-#else
-	bool eso_press = adc_values[stomach_adc_pin] >= gas_pressure_threshold;
-	/*
-	if (stomach_evt_occuring) {
-		if (adc_values[stomach_adc_pin] < gas_pressure_threshold) {
-			stomach_evt_occuring = 0; // don't send again
-			stomach_evt_waiting = 0; // don't send down message 
-		}
-	} else {
-		if (adc_values[stomach_adc_pin] > gas_pressure_threshold) {
-			stomach_evt_occuring = 1;
-			stomach_evt_waiting = EVT_UP;
-		}
-	}
-	*/
-	if (!bvm_sitch) {
-		eso_st = 0;
-	} else {
-		if (eso_press) {
-			if (eso_st == 0 || eso_st == 1) {
-				esophageal_msg_waiting = 1;
-				eso_st = 3;
-			}
-		} else {
-			if (eso_st == 3) {
-				eso_flow_stop_time = millis();
-				eso_st = 2;
-			} else if (eso_st == 0) {
-				eso_st = 1;
-			} else if (eso_st == 2) {
-				ms_time_t now = millis();
-				if (now - eso_flow_stop_time > 2000) {
-					bvm_off_msg_waiting = 1;
-					bvm_sitch = 0;
-				}
-			}
-		}
-	}
-#endif
-}
-
-/* code for echoing PROX to ACT */
-unsigned char prox2act[MIN(PROX_REPORT_SIZE,BIO_EVENT_REPORT_SIZE)];
-//#define ECHO_PROX_TO_ACT
-bool prox2act_msg_waiting;
 /* ACT macro*/
 #define SEND_ACT(pstr) do {int len;\
 						const char* str;\
@@ -347,29 +175,10 @@ bool prox2act_msg_waiting;
 						}\
 						*ReportID = PROX_REPORT_ID;\
 						*ReportSize = PROX_REPORT_SIZE; } while (0)
-/* ESCHAROTOMY ARM VARIABLES. Here because they must be initialized, as they are
- in PROGMEM, but they can't be declared twice */
-MAKE_ESCHAR_MSG(1);
-MAKE_ESCHAR_MSG(2);
-MAKE_ESCHAR_MSG(3);
-MAKE_ESCHAR_MSG(4);
-MAKE_ESCHAR_MSG(5);
-
-/* IV ARM VARIABLES */
-
-DEFINE_PSTRING(iv_arm_msg, "ARM_R_IV_CATH");
 
 /* DEVICE NAME */
 DEFINE_PSTRING(device_name_string, "RFID_proximity");
 
-/* DEBUG FLOW SENSOR */
-DEFINE_PSTRING(blip_str,"BLIP");
-
-/* DEBUG ESCHAR ARM */
-DEFINE_PSTRING(heat_str,"HEAT");
-bool heat_msg_waiting;
-/* FLOW SENSOR VARIABLES */
-FLOW_ACT_MESSAGE_TABLE(AS_ACT_STR);
 
 /** Main program entry point. This routine contains the overall program flow, including initial
  *  setup of all components and the main program loop.
@@ -377,7 +186,7 @@ FLOW_ACT_MESSAGE_TABLE(AS_ACT_STR);
 int main(void)
 {
 	SetupHardware();
-	setup_timer();
+	//setup_timer();
 	LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
 	GlobalInterruptEnable();
 	//setup_airwaysensor();
@@ -534,7 +343,6 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 	//uint16_t strlen_rem;
 	TIME_t ms;
 	UNUSED(HIDInterfaceInfo);
-	const event_t* nextevt;
 	switch (ReportType) {
 		case HID_REPORT_ITEM_Feature:
 			/*if (stm_state == STRINGSTM_STRING_REQUESTED 
@@ -568,12 +376,6 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 				time_to_wire(ms, Data);
 				*ReportSize = TIMESTAMP_FR_SIZE;
 				return true;
-			} else if (*ReportID == SET_SENS_THRESH_REPORT_ID) {
-				for (int i = 0; i < 4; i++) {
-					float_to_wire(sensor_evt_thresh[i], Data + 4*i);
-				}
-				*ReportSize = SET_SENS_THRESH_REPORT_SIZE;
-				return true;
 			} else if (*ReportID == REPORT_MAP_STRING_ID) {
 				int len = bio_report_string.len;
 				len = len > 0xfe ? 0xfe : len;
@@ -591,10 +393,6 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 					Data[1+i] = pgm_read_byte(device_name_string.content + i);
 				}
 				*ReportSize = DEVICE_NAME_REPORT_SIZE;
-				return true;
-			} else if (*ReportID == NO_DATA_REPORT_ID) {
-				Data[0] = lung_st;
-				*ReportSize = NO_DATA_REPORT_SIZE;
 				return true;
 			} else { /* make some other kind of feature report */
 				return false;
@@ -614,31 +412,7 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 		//TODO use a table of functions that might set the report, call each in turn
 		//this will allow better operation with multiple reports, and allow each module's variables to be encapsulated in their files
 			
-			if ((*ReportID == GET_SENSOR_EVENT_REPORT_ID) /*(*ReportID == 0)*/) {
-				//FIXME duplicated code here. Not sure how to handle this duplication as this code must be on the control path when this specific report is requested.
-				if (event_buffer.occupancy) { // nextevt != NULL) {
-					
-					nextevt = deq_event(&event_buffer);
-					event_to_wire(nextevt, Data);
-					*ReportSize = GET_SENSOR_EVENT_REPORT_SIZE;
-					*ReportID = GET_SENSOR_EVENT_REPORT_ID;
-					return true;
-				} else {
-					return false;
-				}
-			} else if ((*ReportID == 3) /*|| (*ReportID == 0)*/) { //show adc output
-				int desired[] = {1, 4, 6, 7}; // 1467 is real, use bogus only for checking
-				for (int adcix = 0; adcix < 4; adcix++) {
-					Data[2*adcix + 1] = (adc_values[desired[adcix]] >> 8);
-					Data[2*adcix] = adc_values[desired[adcix]] & 0xff;
-				}
-				for (int i = 0; i < 4; i ++) {
-					float_to_wire(sensor_varnces[i],Data+8+4*i);
-				}
-				*ReportID = 3;
-				*ReportSize = 24;
-				return true;
-			} else  if (*ReportID == 0) {
+			if (*ReportID == 0) {
 				
 				if (rfid_usable_to_send) {
 					char *msgbuf;
@@ -676,113 +450,6 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 					return true;
 					//*/
 				}
-#ifdef ECHO_PROX_TO_ACT 
-				else if (prox2act_msg_waiting) {
-					int p2a_len = prox2act[0];
-					for (int i = 0; i <= p2a_len; i++) {
-						Data[i] = prox2act[i];
-					}
-					*ReportID = BIO_EVENT_REPORT_ID;
-					*ReportSize = BIO_EVENT_REPORT_SIZE;
-					prox2act_msg_waiting = 0;
-					return true;
-				}
-#endif
-				else if (esophageal_msg_waiting) {
-					SEND_ACT(esophageal_msg_str);
-					esophageal_msg_waiting = 0;
-					return true;
-				} else if (vent_msg_waiting) {
-					SEND_ACT(vent_msg_str);
-					vent_msg_waiting = 0;
-					return true;
-				} else if (bvm_off_msg_waiting) {
-					SEND_ACT(bvm_off_msg_str);
-					bvm_off_msg_waiting = 0;
-					return true;
-				} else if (mainstem_msg_waiting) {
-					SEND_ACT(mainstem_msg_str);
-					mainstem_msg_waiting = 0;
-					return true;
-				} else if (hypervent_msg_waiting) {
-					SEND_ACT(hypervent_msg_str);
-					hypervent_msg_waiting = 0;
-					return true;
-				} else if (o2_msg_waiting) {
-					SEND_ACT(o2_msg_str);
-					o2_msg_waiting = 0;
-					return true;
-				} else if (blip_msg_waiting) {
-					SEND_ACT(blip_str);
-					blip_msg_waiting = 0;
-					return true;
-				} else if (heat_msg_waiting) {
-					SEND_ACT(heat_str);
-					heat_msg_waiting = 0;
-					return true;
-				}
-				//TODO
-#define AS_ACT_SENDER(s) \
-	if (s##_msg_waiting) {\
-		SEND_ACT(pstr_##s);\
-		s##_msg_waiting = 0;\
-		return true;\
-	}
-				FLOW_ACT_MESSAGE_TABLE(AS_ACT_SENDER);
-				//FIXME use an array and a loop
-#define ESCHAR_RESPONSE_MACRO(x) if (eschar_msg_state_##x == ESCHAR_MSG_WAITING) {\
-					SEND_ACT(eschar_msg_##x);\
-					eschar_msg_state_##x = ESCHAR_MSG_SENT;\
-					return true;\
-				}
-				ESCHAR_RESPONSE_MACRO(1)
-				ESCHAR_RESPONSE_MACRO(2)
-				ESCHAR_RESPONSE_MACRO(3)
-				ESCHAR_RESPONSE_MACRO(4)
-				ESCHAR_RESPONSE_MACRO(5)
-				
-				//send the sensor spike event
-				if (event_buffer.occupancy) {
-					//if we are an iv arm, rather than sending a spike event send a message on ACT: "ARM_R_IV_CATH"
-					if (RV_IS_IV_ARM) {
-						deq_event(&event_buffer); //intentionally discard
-						SEND_ACT(iv_arm_msg);
-						return true;
-					} else { // some other thing that uses the rv code FIXME list them
-						nextevt = deq_event(&event_buffer);
-						event_to_wire(nextevt, Data);
-						*ReportSize = GET_SENSOR_EVENT_REPORT_SIZE;
-						*ReportID = GET_SENSOR_EVENT_REPORT_ID;
-						LEDs_SetAllLEDs(LEDMASK_USB_ERROR);
-						return true;
-					}
-				} 
-				#if 1
-				else {
-					if (SEND_ADC_DATA) {
-						//send sensor
-						int desired[] = RV_STM_ADC_NUMS;
-						for (int adcix = 0; adcix < RV_STM_COUNT; adcix++) {
-							Data[2*adcix + 1] = (adc_values[desired[adcix]] >> 8);
-							Data[2*adcix] = adc_values[desired[adcix]] & 0xff;
-						}
-						for (int i = 0; i < RV_STM_COUNT; i ++) {
-							float_to_wire(sensor_varnces[i],Data+(2*RV_STM_COUNT)+4*i);
-						}
-						*ReportID = 3;
-						*ReportSize = (RV_STM_COUNT*(4+2));
-						return true;
-					}
-				}
-				#endif
-				/*
-				else {
-					Data[0] = eso_st;
-					*ReportID = NO_DATA_REPORT_ID;
-					*ReportSize = NO_DATA_REPORT_SIZE;
-					return true;
-				}
-				*/
 			}
 	}
 	return false;
@@ -818,19 +485,12 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 				TIME_t oset;
 				oset = time_from_wire(Data);
 				set_time_oset(oset);
-			} else if (ReportID == SET_SENS_THRESH_REPORT_ID) {
-				for (int i=0; i < 4; i++) {
-					sensor_evt_thresh[i] = float_from_wire(Data + 4*i);
-				}
 			} else if (ReportID == START_BOOTLOADER_REPORT_ID) {
 				//check that proper code was supplied
 				//FIXME lol always succeed
 				//start bootloader
 				LEDs_SetAllLEDs(LEDS_LED1|LEDS_LED2|LEDS_LED3);
 				Jump_To_Bootloader();
-			} else if (ReportID == NO_DATA_REPORT_ID) {
-				heat_enable();
-				heat_msg_waiting = 1;
 			}
 			break;
 		case HID_REPORT_ITEM_Out:
@@ -855,32 +515,6 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 					VENT
 			Stomach module must also consume BVM.
 			*/
-			/*
-			int len = Data[0];
-			for (int i = 0; i <= len; i++) {
-				Serial_SendByte(Data[i]);
-			}*/
-#ifdef ECHO_PROX_TO_ACT
-			//int len = Data[0];
-			for (int i = 0; i <= len; i++) {
-				prox2act[i] = Data[i];
-			}
-			prox2act_msg_waiting = 1;
-#endif
-			if (Data[1] == 'V' && Data[2] == 'E' && Data[3] == 'N' && Data[4] == 'T') { // VENT
-				//TODO what is the appropriate action here
-				vent_sitch = ACT_MSG_ST_RCVD;
-			} else if (Data[1] == 'B' && Data[2] == 'V' && Data[3] == 'M') { // BVM
-				//TODO what is the appropriate action here
-				//do not send any airway messages if the BVM message has not been received
-				bvm_sitch = ACT_MSG_ST_RCVD;
-				//debug_msg_waiting = 1;
-			} else if (Data[1] == 'O' && Data[2] == '2') {
-				//airway emits an O2 message on ACT, echoing it
-				//makes rfid code simpler
-				o2_msg_waiting = 1;
-			}
-			flow_sensor_handle_PROX((char*)Data);
 			break;
 			
 			case BIO_EVENT_REPORT_ID:; /* ACT */
@@ -892,10 +526,6 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 				Rugged arm
 				or rather, all the arms that have a pulse.
 			*/
-			if (Data[1]=='S' && Data[2]=='T' && Data[3]=='O' && Data[4]=='P') { // skip length, check first character
-				pulse_stop();
-			}
-			flow_sensor_handle_ACT((char*) Data);
 			break;
 			
 			case HEART_RATE_REPORT_ID:;
@@ -906,18 +536,6 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 				Escharotomy Arm
 				IV Arm
 			*/
-			int pulse_delay_ms;
-			float hr;
-			//read float from message
-			hr = float_from_wire(Data); // b/m
-			float bps = hr / 60.0; /* b/m * m/s = b/s */
-			float spb = 1.0/bps;
-			float ms_p_b = 1000*spb;
-			pulse_delay_ms = ms_p_b;
-			//convert bpm as float to ms of delay as int
-			//do whatever end up with ms of delay per beat as int
-			//send to pulse unit
-			pulse_set_delay(pulse_delay_ms);
 			
 			break;
 		}

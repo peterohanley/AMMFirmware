@@ -5,7 +5,7 @@
 	//#include <LUFA/Common/Common.h>
 	#include <LUFA/Drivers/Peripheral/Serial.h>
 	#include <string.h>
-	#include "Timer.h"
+	#include "../../Timer.h"
 
 	char (*usable_message)[64];
 	char (*inprog_message)[64];

@@ -42,15 +42,11 @@
 		#include <avr/power.h>
 		#include <avr/interrupt.h>
 		#include <util/delay.h>
-
 		
 		#include "Descriptors.h"
 		#include "Config/AppConfig.h"
-		#include "AirwaySensors.h"
-		#include "Timer.h"
+		#include "../../Timer.h"
 		#include "RFID.h"
-		#include "EscharotomyArm.h"
-		#include "FlowSensor.h"
 
 		#include <LUFA/Common/Common.h>
 		#include <LUFA/Drivers/Board/LEDs.h>
