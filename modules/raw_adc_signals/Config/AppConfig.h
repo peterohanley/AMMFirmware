@@ -117,8 +117,8 @@
 #define RV_IS_IV_ARM 1
 
 //* for eschar arm
-#define RV_STM_COUNT 2
-#define RV_STM_ADC_NUMS {1,0}
+#define RV_STM_COUNT 4
+#define RV_STM_ADC_NUMS {5,4,1,0}
 //*/
 
 //#define RV_STM_COUNT 6

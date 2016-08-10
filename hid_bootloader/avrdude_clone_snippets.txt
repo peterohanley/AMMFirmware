@@ -4,6 +4,7 @@ avrdude -p atmega32u4 -P usb -c avrispmkii -U flash:w:demo_dump.bin:m -U lfuse:w
 
 avrdude -p atmega32u4 -P usb -c avrispmkii -U flash:w:demo_dump.bin -U lfuse:w:demo_dump_low.bin:r -U hfuse:w:demo_dump_high.bin:r -U efuse:w:demo_dump_ext.bin:r
 
+#this one is for initializing the bootloader
 avrdude -p atmega32u4 -P usb -c avrispmkii -U flash:w:boot_and_app.bin -U lfuse:w:0x5e:m -U hfuse:w:0xd9:m -U efuse:w:0xcb:m
 
 #THIS ONE MAKES FILES OF THE BOARD'S INFO

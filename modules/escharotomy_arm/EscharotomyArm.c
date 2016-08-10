@@ -60,7 +60,7 @@ void eschar_init(void)
 	OCR1B = 0x00;
 	
 	//enable output on appropriate pin (B6) and also for the MOSFET (C6)
-	DDRB |= (1<<PB6) | (1<<PC6);
+	DDRB |= (1<<PB6) | (1<<PC6); // FIXME C /= B ???
 	//PORTB |= (1<<PB7);
 	
 }
